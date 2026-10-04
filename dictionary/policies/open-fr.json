@@ -1,0 +1,56 @@
+{
+  "id": "open-fr",
+  "name": "Français — Open Lexicon",
+  "shortName": "Open Lexicon",
+  "language": "fr",
+  "official": false,
+  "description": "Lexique ouvert dérivé de Grammalecte (formes fléchies). Ce n'est pas l'Officiel du Scrabble (ODS).",
+  "source": {
+    "name": "Lexique des formes fléchies du français — Grammalecte",
+    "author": "Olivier R. (Dicollecte / Grammalecte)",
+    "version": "7.7",
+    "url": "https://grammalecte.net/dic/lexique-grammalecte-fr-v7.7.zip",
+    "file": "lexique-grammalecte-fr-v7.7.txt",
+    "sha256": "bdccf2065e252010253171000a38de84581407896b6bc60aca7d4d69dab7e4d2",
+    "license": "MPL-2.0"
+  },
+  "lexicalPolicy": {
+    "folds": "fr",
+    "rejectOtherCharacters": true,
+    "minLength": 2,
+    "maxLength": 15,
+    "subDictionaries": "all",
+    "excludeTags": [
+      "npr",
+      "prn",
+      "patr",
+      "sfx",
+      "pfx",
+      "div",
+      "err"
+    ],
+    "excludeTagPrefixes": [
+      "loc."
+    ],
+    "excludeNotes": [
+      "symb",
+      "abr",
+      "abty",
+      "sig",
+      "ord"
+    ],
+    "excludeLowercaseMismatch": true
+  },
+  "frequencyTiers": {
+    "comment": "Grammalecte 'Indice de fréquence' (0-9) of the most frequent spelling, mapped to 4 tiers (0 rare … 3 very common) used by the AI vocabulary profiles. Corpus counts of very short strings are inflated by abbreviations and noise, so short words lose a few points first.",
+    "thresholds": [
+      2,
+      4,
+      5
+    ],
+    "shortWordPenalty": {
+      "maxLength": 3,
+      "penalty": 2
+    }
+  }
+}
