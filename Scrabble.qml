@@ -137,7 +137,7 @@ Item {
 
   FloatingWindow {
     id: window
-    title: "Scrabble"
+    title: "Omascrabble"
     visible: root.opened
     implicitWidth: 1180
     implicitHeight: 860

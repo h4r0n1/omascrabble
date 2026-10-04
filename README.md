@@ -59,7 +59,7 @@ and/or add it to the Omarchy menu in
 "scrabble": {"icon":"󰊗","label":"Scrabble","action":"omarchy-shell shell toggle omascrabble"},
 ```
 
-The game opens as a regular window (title `Scrabble`); Hyprland floats it by
+The game opens as a regular window (title `Omascrabble`); Hyprland floats it by
 default.
 
 ## 4. Disabling

@@ -5,7 +5,7 @@ Item {
   id: header
 
   property var theme
-  property string title: "Scrabble"
+  property string title: "Omascrabble"
   property string subtitle: ""
   property bool showBack: true
   property bool historyAvailable: false
