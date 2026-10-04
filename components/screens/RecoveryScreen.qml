@@ -37,7 +37,7 @@ Rectangle {
       wrapMode: Text.WordWrap
       lineHeight: 1.2
       text: "Sans dictionnaire, les mots ne peuvent pas être vérifiés et l’ordinateur ne peut pas jouer. Votre partie sauvegardée n’est pas touchée.\n\n"
-        + "Si vous avez supprimé ou modifié les fichiers du plugin, réinstallez-le (omarchy plugin update omascrabble) ; pour un ODS installé à la main, vérifiez le fichier dans ~/.local/share/omascrabble/dictionaries."
+        + "Si vous avez supprimé ou modifié les fichiers du plugin, réinstallez-le (omarchy plugin update omarchy-scrabble) ; pour un ODS installé à la main, vérifiez le fichier dans ~/.local/share/omarchy-scrabble/dictionaries."
       color: recovery.theme.muted
       font.family: recovery.theme.fontFamily
       font.pixelSize: recovery.theme.fontBody

@@ -35,28 +35,28 @@ omarchy plugin add <repository-url>
 ```
 
 `omarchy plugin add` clones the repository into
-`~/.config/omarchy/plugins/omascrabble`, validates the manifest and asks
+`~/.config/omarchy/plugins/omarchy-scrabble`, validates the manifest and asks
 before enabling. A local checkout works as the URL too
 (`omarchy plugin add ~/Work/omarchy-scrabble`).
 
 ## 3. Enabling and opening
 
 ```bash
-omarchy plugin enable omascrabble
-omarchy-shell shell toggle omascrabble     # open / close the game
+omarchy plugin enable omarchy-scrabble
+omarchy-shell shell toggle omarchy-scrabble     # open / close the game
 ```
 
 Bind the toggle to a key in `~/.config/hypr/bindings.lua`, for example:
 
 ```lua
-o.bind("SUPER + SHIFT + ALT + S", "Scrabble", "omarchy-shell shell toggle omascrabble")
+o.bind("SUPER + SHIFT + ALT + S", "Scrabble", "omarchy-shell shell toggle omarchy-scrabble")
 ```
 
 and/or add it to the Omarchy menu in
 `~/.config/omarchy/extensions/omarchy-menu.jsonc`:
 
 ```jsonc
-"scrabble": {"icon":"󰊗","label":"Scrabble","action":"omarchy-shell shell toggle omascrabble"},
+"scrabble": {"icon":"󰊗","label":"Scrabble","action":"omarchy-shell shell toggle omarchy-scrabble"},
 ```
 
 The game opens as a regular window (title `Scrabble`); Hyprland floats it by
@@ -65,14 +65,14 @@ default.
 ## 4. Disabling
 
 ```bash
-omarchy plugin disable omascrabble
+omarchy plugin disable omarchy-scrabble
 ```
 
 ## 5. Removing
 
 ```bash
-omarchy plugin remove omascrabble
-rm -rf ~/.local/state/omascrabble          # saved game, settings, statistics
+omarchy plugin remove omarchy-scrabble
+rm -rf ~/.local/state/omarchy-scrabble          # saved game, settings, statistics
 ```
 
 Remove the keybinding or menu entry you added by hand.
@@ -80,7 +80,7 @@ Remove the keybinding or menu entry you added by hand.
 ## Updating
 
 ```bash
-omarchy plugin update omascrabble
+omarchy plugin update omarchy-scrabble
 omarchy restart shell
 ```
 
@@ -97,7 +97,7 @@ omarchy plugin validate .
 node tests/run.mjs                    # engine, AI and dictionary tests (Node)
 tests/run-qml.sh                      # the same suites under Qt's QML engine
 dev/preview.sh midgame 1180 860       # offscreen render with your Omarchy theme
-omarchy plugin add . && omarchy plugin enable omascrabble
+omarchy plugin add . && omarchy plugin enable omarchy-scrabble
 ```
 
 `dev/preview.sh` runs a separate, short-lived Quickshell on the offscreen
@@ -167,7 +167,7 @@ character (hyphen, apostrophe, ñ…) is left out rather than stripped.
 
 **ODS 9.** The official list is licensed and not included. With a licence, a
 `DictionaryProvider` slot is ready: compile the list into the game's format as
-`~/.local/share/omascrabble/dictionaries/ods9.dawg` (id `ods9`,
+`~/.local/share/omarchy-scrabble/dictionaries/ods9.dawg` (id `ods9`,
 `"official": true`, tile alphabet), and "Français — ODS 9 · Officiel" becomes
 selectable in *Nouvelle partie*. Nothing else changes.
 
@@ -185,7 +185,7 @@ arrows move · `Tab` rack → board → buttons · letters on the board place ti
 `Ctrl+S` save · `H` hint · `Y` history · `F1` help. Hyprland's SUPER bindings
 are never intercepted.
 
-Files, all under `~/.local/state/omascrabble/`: `game.json` (versioned
+Files, all under `~/.local/state/omarchy-scrabble/`: `game.json` (versioned
 save, written after every move), `settings.json`, `stats.json`, `archive/`
 (finished games), `quarantine/` (files that could not be read — kept, never
 deleted).
@@ -193,21 +193,21 @@ deleted).
 IPC, for scripts and keybindings:
 
 ```bash
-omarchy-shell shell call omascrabble status ""
-omarchy-shell shell call omascrabble newGame '{"mode":"human_vs_ai","difficulty":"expert"}'
-omarchy-shell shell call omascrabble demo '{"difficulty":"expert","difficulty2":"casual"}'
-omarchy-shell shell call omascrabble snapshot ""   # PNG in $XDG_RUNTIME_DIR
+omarchy-shell shell call omarchy-scrabble status ""
+omarchy-shell shell call omarchy-scrabble newGame '{"mode":"human_vs_ai","difficulty":"expert"}'
+omarchy-shell shell call omarchy-scrabble demo '{"difficulty":"expert","difficulty2":"casual"}'
+omarchy-shell shell call omarchy-scrabble snapshot ""   # PNG in $XDG_RUNTIME_DIR
 ```
 
 ## 10. Troubleshooting
 
 - **The window doesn't open:** `omarchy plugin list` should show
-  `omascrabble` enabled; then `omarchy-shell shell toggle omascrabble`.
+  `omarchy-scrabble` enabled; then `omarchy-shell shell toggle omarchy-scrabble`.
 - **An update has no effect:** `omarchy restart shell` (see *Updating*).
 - **"Dictionnaire introuvable":** the data files are missing or damaged;
-  `omarchy plugin update omascrabble` or reinstall.
+  `omarchy plugin update omarchy-scrabble` or reinstall.
 - **"Une sauvegarde n'a pas pu être lue":** the file was moved to
-  `~/.local/state/omascrabble/quarantine/`; nothing was deleted.
+  `~/.local/state/omarchy-scrabble/quarantine/`; nothing was deleted.
 - **Logs:** `quickshell log -p /usr/share/omarchy/shell -t 100 | grep -i scrabble`.
   A single `QObject::connect(QJSEngine, QtObject): invalid nullptr parameter`
   warning comes from Qt's WorkerScript under Quickshell and is harmless.

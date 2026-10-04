@@ -25,8 +25,8 @@ ln -s "$shell_src/Ui" "$work/config/Ui"
 ln -s "$repo" "$work/config/plugin"
 cp "$repo/dev/preview/shell.qml" "$work/config/shell.qml"
 if [[ $scenario == corrupt ]]; then
-  mkdir -p "$work/state/omascrabble"
-  printf '{"format":"omarchy-scrabble-save","version":1,"gameId":"broken","bag":[1,1' > "$work/state/omascrabble/game.json"
+  mkdir -p "$work/state/omarchy-scrabble"
+  printf '{"format":"omarchy-scrabble-save","version":1,"gameId":"broken","bag":[1,1' > "$work/state/omarchy-scrabble/game.json"
 fi
 
 PREVIEW_SCENARIO="$scenario" PREVIEW_OUTPUT="$output" PREVIEW_WIDTH="$width" PREVIEW_HEIGHT="$height" \
@@ -34,5 +34,5 @@ PREVIEW_PLUGIN="$repo" PREVIEW_HC="${PREVIEW_HC:-}" XDG_STATE_HOME="$work/state"
 QT_QPA_PLATFORM=offscreen timeout 60 quickshell -p "$work/config" 2>&1 \
   | grep -v -e "WAYLAND_DISPLAY" -e "QT_QPA_PLATFORM" -e "actually running" -e "--- WARNING" -e "window masks" || true
 
-[[ $scenario == corrupt ]] && ls "$work/state/omascrabble/quarantine" 2>/dev/null | sed 's/^/quarantined: /'
+[[ $scenario == corrupt ]] && ls "$work/state/omarchy-scrabble/quarantine" 2>/dev/null | sed 's/^/quarantined: /'
 [[ -f $output ]] && echo "$output"

@@ -102,7 +102,7 @@ QtObject {
     try {
       return fn()
     } catch (e) {
-      console.warn("omascrabble: " + label + " failed:", e && e.stack ? e.stack : e)
+      console.warn("omarchy-scrabble: " + label + " failed:", e && e.stack ? e.stack : e)
       say("Une erreur inattendue est survenue (" + label + "). La partie est intacte.", "error")
       return fallback
     }
@@ -815,7 +815,7 @@ QtObject {
       return
     }
     if (msg.type === "error") {
-      console.warn("omascrabble: AI error:", msg.stage, msg.message)
+      console.warn("omarchy-scrabble: AI error:", msg.stage, msg.message)
       aiThinking = false
       say("L’ordinateur n’a pas pu jouer et passe son tour.", "error")
       if (isActive && game.players[game.current].kind === "ai") applyGameAction({ type: "pass", player: game.current })
@@ -831,7 +831,7 @@ QtObject {
       if (!action || !ctl.isActive) return
       var res = ctl.applyGameAction(action)
       if (!res.ok && ctl.isActive && ctl.game.players[ctl.game.current].kind === "ai") {
-        console.warn("omascrabble: engine refused the AI move:", res.message)
+        console.warn("omarchy-scrabble: engine refused the AI move:", res.message)
         ctl.applyGameAction({ type: "pass", player: ctl.game.current })
       }
     }

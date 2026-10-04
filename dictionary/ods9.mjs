@@ -6,7 +6,7 @@
 //
 //   node tools/build-dictionary.mjs --policy dictionary/policies/ods9.example.json \
 //        --source <licensed word list> --format wordlist \
-//        --out ~/.local/share/omascrabble/dictionaries
+//        --out ~/.local/share/omarchy-scrabble/dictionaries
 //
 // — and the game offers "Français — ODS 9 · Officiel" once the file is
 // there. Nothing else changes: scoring, the board, the AI and the UI only see

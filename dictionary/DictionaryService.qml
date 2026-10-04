@@ -13,7 +13,7 @@ import "registry.mjs" as Registry
 // executed or imported.
 //
 // Bundled data lives in the plugin (dictionary/data); installed data, such as
-// a licensed ODS 9, in $XDG_DATA_HOME/omascrabble/dictionaries.
+// a licensed ODS 9, in $XDG_DATA_HOME/omarchy-scrabble/dictionaries.
 Item {
   id: service
   visible: false
@@ -23,7 +23,7 @@ Item {
 
   readonly property string userDictionaryDir: {
     var x = Quickshell.env("XDG_DATA_HOME")
-    return (x && x.charAt(0) === "/" ? x : Quickshell.env("HOME") + "/.local/share") + "/omascrabble/dictionaries"
+    return (x && x.charAt(0) === "/" ? x : Quickshell.env("HOME") + "/.local/share") + "/omarchy-scrabble/dictionaries"
   }
 
   property string dictionaryId: ""
@@ -97,7 +97,7 @@ Item {
     loader = null
     status = "error"
     errorMessage = e && e.message ? String(e.message) : String(e)
-    console.warn("omascrabble: dictionary " + dictionaryId + " failed:", errorMessage)
+    console.warn("omarchy-scrabble: dictionary " + dictionaryId + " failed:", errorMessage)
     failed(errorMessage)
   }
 
@@ -117,7 +117,7 @@ Item {
       workerDictionaryId = String(message.dictId || "")
     } else if (message.type === "error" && message.stage === "init") {
       workerReady = false
-      console.warn("omascrabble: AI worker could not load the dictionary:", message.message)
+      console.warn("omarchy-scrabble: AI worker could not load the dictionary:", message.message)
     }
   }
 
@@ -165,7 +165,7 @@ Item {
     id: formsFile
     printErrors: false
     onLoaded: if (service.worker) service.worker.sendMessage({ type: "forms", text: text() })
-    onLoadFailed: function(err) { console.warn("omascrabble: display forms unavailable") }
+    onLoadFailed: function(err) { console.warn("omarchy-scrabble: display forms unavailable") }
   }
 
   // Detect a user-installed ODS 9 without keeping its contents around.
