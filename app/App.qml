@@ -18,6 +18,7 @@ Item {
   readonly property alias controller: gameController
   readonly property alias preferences: systemPreferences
   readonly property alias sounds: soundPlayer
+  readonly property alias definitions: definitionsService
 
   SaveManager {
     id: saveManager
@@ -48,6 +49,8 @@ Item {
   }
 
   SystemPreferences { id: systemPreferences }
+
+  DefinitionsService { id: definitionsService }
 
   Sounds {
     id: soundPlayer

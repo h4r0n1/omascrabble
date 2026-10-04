@@ -51,6 +51,7 @@ ShellRoot {
         saves: app.saves
         dictionary: app.dictionary
         sounds: app.sounds
+        definitions: app.definitions
         systemPrefersDark: app.preferences.prefersDark
       }
     }
@@ -239,6 +240,7 @@ ShellRoot {
         if (sc === "joker") c.jokerRequest = { tileId: 0, row: 0, col: 0 }
         if (sc === "exchange") view.openExchange()
         if (sc === "practice") c.requestHint()
+        if (sc === "words" || sc === "words-missing") view.openWords(["SIEGE", "CHAISE", "MOT"], "Vous  ·  H8  ·  24 pts")
         return
       }
       if (rootShell.scenario === "keys") { rootShell.runKeys(); return }

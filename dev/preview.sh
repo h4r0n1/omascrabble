@@ -24,6 +24,9 @@ ln -s "$shell_src/Commons" "$work/config/Commons"
 ln -s "$shell_src/Ui" "$work/config/Ui"
 ln -s "$repo" "$work/config/plugin"
 cp "$repo/dev/preview/shell.qml" "$work/config/shell.qml"
+if [[ -n ${PREVIEW_DEFS:-} ]]; then
+  mkdir -p "$work/data/omascrabble" && cp -r "$PREVIEW_DEFS" "$work/data/omascrabble/definitions"
+fi
 if [[ $scenario == corrupt ]]; then
   mkdir -p "$work/state/omascrabble"
   printf '{"format":"omascrabble-save","version":1,"gameId":"broken","bag":[1,1' > "$work/state/omascrabble/game.json"

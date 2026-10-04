@@ -18,6 +18,8 @@ Item {
   property bool showValidity: true
   property bool compact: false
   property string emptyText: "Placez des lettres sur le plateau."
+  property bool clickable: false
+  signal wordActivated(string word)
 
   implicitHeight: content.implicitHeight
   implicitWidth: 240
@@ -65,6 +67,13 @@ Item {
           font.weight: modelData.isMain ? Font.Bold : Font.Normal
           font.strikeout: parent.bad
           font.letterSpacing: 0.8
+        }
+        MouseArea {
+          anchors.fill: parent
+          enabled: preview.clickable
+          hoverEnabled: preview.clickable
+          cursorShape: preview.clickable ? Qt.PointingHandCursor : Qt.ArrowCursor
+          onClicked: preview.wordActivated(modelData.word)
         }
         Text {
           visible: parent.bad

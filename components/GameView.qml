@@ -13,6 +13,7 @@ FocusScope {
   property var saves
   property var dictionary
   property var sounds: null
+  property var definitions: null
   property bool systemPrefersDark: true
   property bool systemReducedMotion: false
   property bool windowVisible: true
@@ -367,6 +368,10 @@ FocusScope {
             theme: appTheme
             visible: view.controller.pending.length === 0
             result: view.lastMovePreview()
+            clickable: true
+            onWordActivated: function(word) {
+              if (view.controller.lastCommitted) view.showMoveWords(view.controller.lastCommitted.moveIndex)
+            }
             emptyText: view.controller.isActive ? (view.controller.humanTurn ? "À vous de jouer. Placez des lettres sur le plateau." : "") : ""
             showValidity: false
           }
@@ -545,8 +550,25 @@ FocusScope {
   }
 
   function toggleHighlight(index) {
-    controller.highlightMove = controller.highlightMove === index ? -1 : index
+    controller.highlightMove = index
     controller.revision++
+    showMoveWords(index)
+  }
+
+  // Definitions of the words a move formed.
+  function showMoveWords(index) {
+    var m = controller.game ? controller.game.moves[index] : null
+    if (!m || m.type !== "play") return
+    var words = m.words.map(function(w) { return w.word })
+    openWords(words, controller.playerLabel(m.player) + "  ·  " + m.position + "  ·  " + m.score + " pts" + (m.withdrawn ? "  ·  coup annulé" : ""))
+  }
+  function openWords(words, subtitle) {
+    if (!words || !words.length) return
+    controller.lookupForms(words)
+    if (definitions) definitions.refresh()
+    wordDialog.words = words
+    wordDialog.subtitle = subtitle || ""
+    wordDialog.open = true
   }
 
   // ------------------------------------------------------ move handling
@@ -943,6 +965,18 @@ FocusScope {
     onReveal: { view.controller.revealRack(); keys.forceActiveFocus() }
   }
 
+  WordDialog {
+    id: wordDialog
+    theme: appTheme
+    definitions: view.definitions
+    forms: view.controller ? view.controller.displayForms : ({})
+    onClosed: {
+      open = false
+      if (view.controller) { view.controller.highlightMove = -1; view.controller.revision++ }
+      keys.forceActiveFocus()
+    }
+  }
+
   ShortcutsDialog {
     id: shortcutsDialog
     theme: appTheme
@@ -981,6 +1015,7 @@ FocusScope {
     onReplayRequested: view.replaying = true
     onRematchRequested: view.startNewGame(view.settings.newGame ? Object.assign({}, view.settings.newGame, { difficulty: view.settings.ai.difficulty }) : {})
     onCloseRequested: view.endDismissed = true
+    onWordRequested: function(moveIndex) { view.showMoveWords(moveIndex) }
   }
 
   ReplayBar {

@@ -15,6 +15,7 @@ FocusScope {
   signal replayRequested()
   signal rematchRequested()
   signal closeRequested()
+  signal wordRequested(int moveIndex)
 
   readonly property var g: controller ? controller.game : null
   readonly property var info: g && g.end ? g.end : null
@@ -70,7 +71,7 @@ FocusScope {
   function wordsOf(player) {
     if (!g) return []
     return g.moves.filter(function(m) { return m.player === player && m.type === "play" && !m.withdrawn })
-      .map(function(m) { return { text: m.words[0].notation || m.words[0].word, score: m.score, bingo: m.bingo, position: m.position } })
+      .map(function(m) { return { text: m.words[0].notation || m.words[0].word, score: m.score, bingo: m.bingo, position: m.position, index: m.index } })
   }
 
   Rectangle {
@@ -256,6 +257,11 @@ FocusScope {
                     font.pixelSize: end.theme.fontBody
                     font.letterSpacing: 0.6
                     anchors.verticalCenter: parent.verticalCenter
+                  }
+                  MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: end.wordRequested(modelData.index)
                   }
                   Text {
                     anchors.right: parent.right

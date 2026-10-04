@@ -171,6 +171,24 @@ character (hyphen, apostrophe, ñ…) is left out rather than stripped.
 `"official": true`, tile alphabet), and "Français — ODS 9 · Officiel" becomes
 selectable in *Nouvelle partie*. Nothing else changes.
 
+### Definitions (optional)
+
+Click a word in the history, the last-move panel or the end-of-game lists to
+see its definitions. They come from the **Wiktionnaire** (French Wiktionary,
+CC BY-SA 4.0, extracted by Kaikki.org) and are an optional pack, installed once:
+
+```bash
+python3 ~/.config/omarchy/plugins/omascrabble/tools/install-definitions.py
+```
+
+It streams about 700 MB, keeps only French entries playable in the game's
+dictionary (with up to three short definitions each, and a link from an
+inflected form to its base word), and writes small JSON shards to
+`~/.local/share/omascrabble/definitions`. Python 3 standard library only. The
+game reads the pack offline and never downloads anything itself; without it,
+the dialog shows the word's French spelling and the install command. Remove it
+with `rm -rf ~/.local/share/omascrabble/definitions`.
+
 ## 9. Configuration
 
 Everything is in the game's *Réglages*: appearance (follow Omarchy, light,
