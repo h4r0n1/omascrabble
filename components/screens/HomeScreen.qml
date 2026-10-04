@@ -56,31 +56,43 @@ FocusScope {
       y: Math.max(home.theme.spaceHuge, (parent.height - implicitHeight) / 2.4)
       spacing: home.theme.spaceHuge
 
-      // The title, set in tiles.
-      Row {
+      // The title, set in tiles: a smaller OMA laid above SCRABBLE, flush
+      // with its first letter, like a prefix placed on the board.
+      Column {
         anchors.horizontalCenter: parent.horizontalCenter
-        spacing: Math.round(home.tileSize * 0.12)
-        Repeater {
-          model: [["S", 1], ["C", 3], ["R", 1], ["A", 1], ["B", 3], ["B", 3], ["L", 1], ["E", 1]]
-          Tile {
-            required property var modelData
-            required property int index
-            theme: home.theme
-            size: home.tileSize
-            letter: modelData[0]
-            points: modelData[1]
-            rotation: [-2, 1.5, -1, 2, -1.5, 1, -2, 1.5][index]
-            y: [0, 3, -2, 2, 0, -3, 2, 0][index]
+        spacing: Math.round(home.tileSize * 0.14)
+        Row {
+          spacing: Math.round(home.tileSize * 0.1)
+          Repeater {
+            model: [["O", 1], ["M", 2], ["A", 1]]
+            Tile {
+              required property var modelData
+              required property int index
+              theme: home.theme
+              size: Math.round(home.tileSize * 0.62)
+              letter: modelData[0]
+              points: modelData[1]
+              rotation: [1.5, -1, 2][index]
+              y: [1, -1, 0][index]
+            }
           }
         }
-      }
-
-      Text {
-        anchors.horizontalCenter: parent.horizontalCenter
-        text: "Le jeu de lettres classique, en français, pour Omarchy."
-        color: home.theme.muted
-        font.family: home.theme.fontFamily
-        font.pixelSize: home.theme.fontBody
+        Row {
+          spacing: Math.round(home.tileSize * 0.12)
+          Repeater {
+            model: [["S", 1], ["C", 3], ["R", 1], ["A", 1], ["B", 3], ["B", 3], ["L", 1], ["E", 1]]
+            Tile {
+              required property var modelData
+              required property int index
+              theme: home.theme
+              size: home.tileSize
+              letter: modelData[0]
+              points: modelData[1]
+              rotation: [-2, 1.5, -1, 2, -1.5, 1, -2, 1.5][index]
+              y: [0, 3, -2, 2, 0, -3, 2, 0][index]
+            }
+          }
+        }
       }
 
       Rectangle {
