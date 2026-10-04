@@ -8,5 +8,7 @@ import * as validation from "./validation.test.mjs"
 import * as endgame from "./endgame.test.mjs"
 import * as serializer from "./serializer.test.mjs"
 import * as dictionary from "./dictionary.test.mjs"
+import * as ai from "./ai.test.mjs"
+import * as aiplayer from "./aiplayer.test.mjs"
 
-export const SUITES = [board, scoring, bag, validation, endgame, serializer, dictionary]
+export const SUITES = [board, scoring, bag, validation, endgame, serializer, dictionary, ai, aiplayer]

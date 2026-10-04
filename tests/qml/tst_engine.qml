@@ -21,6 +21,7 @@ TestCase {
 
   function test_all_suites() {
     var runner = Harness.createRunner({
+      slow: true,
       openLexicon: readFixture("dictionary/data/open-fr.dawg"),
       openLexiconForms: readFixture("dictionary/data/open-fr.forms.dawg")
     })

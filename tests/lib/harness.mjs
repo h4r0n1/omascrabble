@@ -55,9 +55,12 @@ export function createRunner(context) {
       for (const item of pending) {
         const label = item.suite + " › " + item.title
         if (filter && label.indexOf(filter) === -1) continue
+        const started = Date.now()
         try {
           item.fn(t.context)
           results.passed++
+          const ms = Date.now() - started
+          if (ms > 1000) results.log.push("SLOW " + label + " (" + ms + " ms)")
         } catch (e) {
           if (e instanceof SkipSignal) {
             results.skipped++
