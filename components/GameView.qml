@@ -112,17 +112,19 @@ FocusScope {
       }
     }
     property var pendingConfig: null
-    Connections {
-      target: view.dictionary
-      ignoreUnknownSignals: true
-      function onReady() {
-        if (setup.pendingConfig) {
-          var c = setup.pendingConfig
-          setup.pendingConfig = null
-          view.startNewGame(c)
-        }
+  }
+
+  property var connectedDictionary: null
+  onDictionaryChanged: {
+    if (connectedDictionary === dictionary || !dictionary) return
+    dictionary.ready.connect(function() {
+      if (setup.pendingConfig) {
+        var c = setup.pendingConfig
+        setup.pendingConfig = null
+        view.startNewGame(c)
       }
-    }
+    })
+    connectedDictionary = dictionary
   }
 
   // --------------------------------------------------------- game screen
@@ -591,35 +593,41 @@ FocusScope {
     }
   }
 
-  Connections {
-    target: view.controller
-    ignoreUnknownSignals: true
-    function onMoveCommitted(events, result, player) {
-      for (var i = 0; i < events.length; i++) {
-        var e = events[i]
-        if (e.type === "play") {
-          view.scoreFlyout(e.player, e.score, e.bingo)
-          var cells = []
-          for (var k = 0; k < e.cells.length; k++) cells.push(e.cells[k].row * 15 + e.cells[k].col)
-          board.flash(cells)
-          if (view.sounds) view.sounds.play(e.bingo ? "bingo" : "valid")
-        } else if (e.type === "challenge" && e.penalty && e.penalty.type === "points") {
-          view.scoreFlyout(e.player, -e.penalty.points, false)
-        } else if (e.type === "move_withdrawn") {
-          if (view.sounds) view.sounds.play("invalid")
-        } else if (e.type === "game_over") {
-          view.endDismissed = false
-        }
+  // Controller signals, connected once the host injects the controller (a
+  // Connections element with a null target would warn during injection).
+  function onMoveCommitted(events, result, player) {
+    for (var i = 0; i < events.length; i++) {
+      var e = events[i]
+      if (e.type === "play") {
+        view.scoreFlyout(e.player, e.score, e.bingo)
+        var cells = []
+        for (var k = 0; k < e.cells.length; k++) cells.push(e.cells[k].row * 15 + e.cells[k].col)
+        board.flash(cells)
+        if (view.sounds) view.sounds.play(e.bingo ? "bingo" : "valid")
+      } else if (e.type === "challenge" && e.penalty && e.penalty.type === "points") {
+        view.scoreFlyout(e.player, -e.penalty.points, false)
+      } else if (e.type === "move_withdrawn") {
+        if (view.sounds) view.sounds.play("invalid")
+      } else if (e.type === "game_over") {
+        view.endDismissed = false
       }
     }
-    function onMoveRejected(message, result) {
-      view.controller.say(message, "error")
-      if (view.sounds) view.sounds.play("invalid")
-    }
-    function onGameEnded(end) {
-      view.endDismissed = false
-      if (view.sounds) view.sounds.play(end.winner === 0 || end.winner === null ? "victory" : "valid")
-    }
+  }
+  function onMoveRejected(message, result) {
+    view.controller.say(message, "error")
+    if (view.sounds) view.sounds.play("invalid")
+  }
+  function onGameEnded(end) {
+    view.endDismissed = false
+    if (view.sounds) view.sounds.play(end.winner === 0 || end.winner === null ? "victory" : "valid")
+  }
+  property var connectedController: null
+  onControllerChanged: {
+    if (connectedController === controller || !controller) return
+    controller.moveCommitted.connect(view.onMoveCommitted)
+    controller.moveRejected.connect(view.onMoveRejected)
+    controller.gameEnded.connect(view.onGameEnded)
+    connectedController = controller
   }
 
   // ------------------------------------------------------------ dragging
@@ -1024,6 +1032,36 @@ FocusScope {
     dictionary: view.dictionary
     saves: view.saves
     visible: !!view.dictionary && (view.dictionary.status === "missing" || view.dictionary.status === "error")
+  }
+
+  // Shown when the plugin on disk is newer than the code running in the
+  // shell: keep-loaded panels only pick up new code on a shell restart.
+  property string runningVersion: ""
+  property string installedVersion: ""
+  Rectangle {
+    id: updateBanner
+    z: 96
+    visible: view.runningVersion !== "" && view.installedVersion !== "" && view.runningVersion !== view.installedVersion
+    anchors.top: parent.top
+    anchors.horizontalCenter: parent.horizontalCenter
+    anchors.topMargin: appTheme.spaceSmall
+    width: Math.min(parent.width - 2 * appTheme.padding, bannerText.implicitWidth + 2 * appTheme.padding)
+    height: bannerText.implicitHeight + appTheme.padding
+    radius: appTheme.radius
+    color: appTheme.panelStrong
+    border.width: appTheme.borderWidth
+    border.color: appTheme.alpha(appTheme.accent, 0.7)
+    Text {
+      id: bannerText
+      anchors.centerIn: parent
+      width: Math.min(implicitWidth, view.width - 4 * appTheme.padding)
+      wrapMode: Text.WordWrap
+      horizontalAlignment: Text.AlignHCenter
+      text: "La version " + view.installedVersion + " est installée (" + view.runningVersion + " en cours). Redémarrez le shell pour l’utiliser : omarchy restart shell"
+      color: appTheme.foreground
+      font.family: appTheme.fontFamily
+      font.pixelSize: appTheme.fontSmall
+    }
   }
 
   // Save problems and notices: a quiet line at the bottom.

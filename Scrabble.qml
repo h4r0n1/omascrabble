@@ -1,5 +1,6 @@
 import QtQuick
 import Quickshell
+import Quickshell.Io
 import qs.Commons
 
 // Omarchy Scrabble — panel entry point.
@@ -18,6 +19,9 @@ Item {
   id: root
 
   readonly property string selfId: "omascrabble"
+  // Must match manifest.json "version"; a mismatch means the files on disk
+  // were updated while this (keep-loaded) code kept running.
+  readonly property string codeVersion: "0.1.0"
   readonly property string pluginDir: {
     var url = Qt.resolvedUrl(".").toString()
     return decodeURIComponent(url.replace(/^file:\/\//, "")).replace(/\/$/, "")
@@ -104,6 +108,18 @@ Item {
     return path
   }
 
+  // The manifest on disk, re-read on each open to notice updates.
+  property string installedVersion: ""
+  FileView {
+    id: manifestFile
+    path: root.pluginDir + "/manifest.json"
+    printErrors: false
+    onLoaded: {
+      try { root.installedVersion = String(JSON.parse(text()).version || "") } catch (e) { root.installedVersion = "" }
+    }
+  }
+  onOpenedChanged: if (opened) manifestFile.reload()
+
   // ------------------------------------------------------------- services
 
   Loader {
@@ -153,6 +169,8 @@ Item {
           item.systemReducedMotion = Qt.binding(function() { return app.preferences.reducedMotion })
           item.windowVisible = Qt.binding(function() { return root.opened })
           item.closeRequested.connect(root.requestClose)
+          item.runningVersion = root.codeVersion
+          item.installedVersion = Qt.binding(function() { return root.installedVersion })
           item.forceActiveFocus()
         }
       }
