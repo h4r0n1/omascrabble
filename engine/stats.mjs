@@ -88,6 +88,7 @@ export function summarizeGame(state, me) {
 
 export function recordGame(stats, summary) {
   const s = normalizeStats(stats)
+  if (summary.mode === MODE.AI_VS_AI) return s // a demonstration is nobody's game
   if (s.recent.some(function(r) { return r.gameId === summary.gameId })) return s // already counted
   s.gamesPlayed++
   if (s.byMode[summary.mode] !== undefined) s.byMode[summary.mode]++

@@ -114,6 +114,7 @@ FocusScope {
     property var pendingConfig: null
     Connections {
       target: view.dictionary
+      ignoreUnknownSignals: true
       function onReady() {
         if (setup.pendingConfig) {
           var c = setup.pendingConfig
@@ -261,7 +262,7 @@ FocusScope {
         controller: view.controller
         tileSize: gameScreen.rackTile
         tiles: view.controller.rackTiles
-        hidden: view.controller.handoverPending
+        hidden: view.controller.handoverPending || (view.controller.game !== null && view.controller.game.mode === "ai_vs_ai")
         cursorVisible: view.keyboardMode && view.keyZone === "rack" && keys.activeFocus
         cursorIndex: view.rackCursor
         draggingId: view.dragTileId
@@ -479,7 +480,8 @@ FocusScope {
   function gameSubtitle() {
     var g = controller ? controller.game : null
     if (!g) return ""
-    var mode = g.mode === "human_vs_ai" ? "Contre l’ordinateur" : g.mode === "human_vs_human" ? "Deux joueurs" : "Entraînement"
+    var mode = g.mode === "human_vs_ai" ? "Contre l’ordinateur" : g.mode === "human_vs_human" ? "Deux joueurs"
+      : g.mode === "ai_vs_ai" ? "Démonstration" : "Entraînement"
     var parts = [mode]
     if (g.rules.validation === "challenge") parts.push("avec contestation")
     if (g.rules.time.totalMs > 0) parts.push(Math.round(g.rules.time.totalMs / 60000) + " min")
@@ -591,6 +593,7 @@ FocusScope {
 
   Connections {
     target: view.controller
+    ignoreUnknownSignals: true
     function onMoveCommitted(events, result, player) {
       for (var i = 0; i < events.length; i++) {
         var e = events[i]

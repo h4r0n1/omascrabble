@@ -604,6 +604,12 @@ QtObject {
     } else if (mode === "human_vs_human") {
       players = [{ name: names[0], kind: "human" }, { name: names[1], kind: "human" }]
       first = c.firstPlayer === "random" ? "random" : 0
+    } else if (mode === "ai_vs_ai") {
+      var d1 = c.difficulty || "expert"
+      var d2 = c.difficulty2 || d1
+      players = [{ name: "Ordinateur 1", kind: "ai", difficulty: d1 }, { name: "Ordinateur 2", kind: "ai", difficulty: d2 }]
+      first = 0
+      rules.validation = "immediate"
     } else {
       players = [{ name: names[0] || "Vous", kind: "human" }]
     }
@@ -673,7 +679,7 @@ QtObject {
     stopAi()
     pending = []
     selectedTileId = -1
-    if (saves) endSummary = saves.recordFinishedGame(game, viewerIndex(game))
+    if (saves && game.mode !== "ai_vs_ai") endSummary = saves.recordFinishedGame(game, viewerIndex(game))
     gameEnded(game.end)
   }
 

@@ -10,5 +10,6 @@ import * as serializer from "./serializer.test.mjs"
 import * as dictionary from "./dictionary.test.mjs"
 import * as ai from "./ai.test.mjs"
 import * as aiplayer from "./aiplayer.test.mjs"
+import * as stats from "./stats.test.mjs"
 
-export const SUITES = [board, scoring, bag, validation, endgame, serializer, dictionary, ai, aiplayer]
+export const SUITES = [board, scoring, bag, validation, endgame, serializer, dictionary, ai, aiplayer, stats]

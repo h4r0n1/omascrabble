@@ -67,6 +67,33 @@ Item {
     return app ? app.controller.statusJson() : JSON.stringify({ loaded: false })
   }
 
+  // omarchy-shell shell call omascrabble newGame '{"mode":"human_vs_ai","difficulty":"expert"}'
+  // Starts a game (opening the window); `demo` starts computer against
+  // computer, which never counts in the statistics.
+  function newGame(arg) {
+    var config = {}
+    try { config = arg ? JSON.parse(String(arg)) : {} } catch (e) { return "bad json" }
+    if (!opened) {
+      if (shell && typeof shell.summon === "function") shell.summon(selfId, "{}")
+      else open("{}")
+    }
+    var app = appLoader.item
+    if (!app || !viewLoader.item) return "loading"
+    if (!app.dictionary.provider) return "dictionary not ready"
+    var base = app.saves.settings.newGame
+    var full = Object.assign({ difficulty: app.saves.settings.ai.difficulty }, base, config)
+    if (!app.controller.newGame(full)) return "refused"
+    viewLoader.item.showGame()
+    return "ok"
+  }
+
+  function demo(arg) {
+    var config = {}
+    try { config = arg ? JSON.parse(String(arg)) : {} } catch (e) { return "bad json" }
+    config.mode = "ai_vs_ai"
+    return newGame(JSON.stringify(config))
+  }
+
   // Saves a picture of the game window to $XDG_RUNTIME_DIR (fixed name) and
   // returns the path — for bug reports and testing.
   function snapshot(arg) {

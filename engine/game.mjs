@@ -32,7 +32,8 @@ export const STATE_VERSION = 1
 export const MODE = Object.freeze({
   HUMAN_VS_AI: "human_vs_ai",
   HUMAN_VS_HUMAN: "human_vs_human",
-  PRACTICE: "practice"
+  PRACTICE: "practice",
+  AI_VS_AI: "ai_vs_ai"          // demonstration / spectator: two AIs, nobody's stats
 })
 
 export const STATUS = Object.freeze({ ACTIVE: "active", ENDED: "ended" })
