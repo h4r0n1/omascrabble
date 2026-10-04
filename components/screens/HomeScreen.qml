@@ -56,12 +56,12 @@ FocusScope {
       y: Math.max(home.theme.spaceHuge, (parent.height - implicitHeight) / 2.4)
       spacing: home.theme.spaceHuge
 
-      // The title, set in tiles: a smaller OMA laid above SCRABBLE, flush
-      // with its first letter, like a prefix placed on the board.
+      // The title, set in tiles: a smaller OMA centred above SCRABBLE.
       Column {
         anchors.horizontalCenter: parent.horizontalCenter
         spacing: Math.round(home.tileSize * 0.14)
         Row {
+          anchors.horizontalCenter: parent.horizontalCenter
           spacing: Math.round(home.tileSize * 0.1)
           Repeater {
             model: [["O", 1], ["M", 2], ["A", 1]]
