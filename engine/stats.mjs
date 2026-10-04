@@ -48,11 +48,12 @@ export function summarizeGame(state, me) {
   const self = Number.isInteger(me) ? me : 0
   const mine = state.moves.filter(function(m) { return m.player === self })
   const plays = mine.filter(function(m) { return m.type === "play" && !m.withdrawn })
+  // The best "word" is the best move: what the player scored with it,
+  // Scrabble bonus included, named after its main word.
   let best = null
   for (const m of plays) {
-    for (const w of m.words) {
-      if (!best || w.score > best.score) best = { word: w.word, notation: w.notation || w.word, score: w.score }
-    }
+    const main = m.words[0]
+    if (main && (!best || m.score > best.score)) best = { word: main.word, notation: main.notation || main.word, score: m.score }
   }
   let tiles = 0
   for (const m of plays) tiles += m.placements.length

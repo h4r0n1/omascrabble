@@ -32,7 +32,7 @@ export const DICTIONARIES = Object.freeze([
     location: "user",
     file: "ods9.dawg",
     formsFile: "ods9.forms.dawg",
-    note: "Non fourni : nécessite une licence de l’Officiel du Scrabble."
+    note: "liste sous licence de l’Officiel du Scrabble, non fournie."
   })
 ])
 
