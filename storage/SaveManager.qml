@@ -6,7 +6,7 @@ import "../engine/stats.mjs" as Stats
 import "../app/settings.mjs" as SettingsModel
 
 // Local persistence: the game in progress, settings and statistics, under
-// $XDG_STATE_HOME/omarchy-scrabble (~/.local/state/omarchy-scrabble).
+// $XDG_STATE_HOME/omascrabble (~/.local/state/omascrabble).
 //
 // Nothing is ever written inside the plugin directory: the shell reloads
 // every plugin when a file changes there. Writes are atomic (temp file +
@@ -25,7 +25,7 @@ Item {
     var x = Quickshell.env("XDG_STATE_HOME")
     return x && x.charAt(0) === "/" ? x : home + "/.local/state"
   }
-  readonly property string stateDir: stateHome + "/omarchy-scrabble"
+  readonly property string stateDir: stateHome + "/omascrabble"
   readonly property string gamePath: stateDir + "/game.json"
   readonly property string settingsPath: stateDir + "/settings.json"
   readonly property string statsPath: stateDir + "/stats.json"
@@ -58,7 +58,7 @@ Item {
     quarantineProc.command = ["sh", "-c", 'mkdir -p -- "$(dirname -- "$2")" && mv -f -- "$1" "$2"', "quarantine", path, target]
     quarantineProc.running = true
     problem = { file: label, error: failure.error || "CORRUPT", message: failure.message || "", detail: failure.detail || "", keptAs: target }
-    console.warn("omarchy-scrabble: " + label + " could not be loaded (" + (failure.error || "?") + " " + (failure.detail || "") + "), kept as " + target)
+    console.warn("omascrabble: " + label + " could not be loaded (" + (failure.error || "?") + " " + (failure.detail || "") + "), kept as " + target)
   }
 
   function dismissProblem() { problem = null }
@@ -76,7 +76,7 @@ Item {
       return true
     } catch (e) {
       lastError = String(e)
-      console.warn("omarchy-scrabble: could not save the game:", e)
+      console.warn("omascrabble: could not save the game:", e)
       return false
     }
   }
@@ -114,7 +114,7 @@ Item {
       archiveGame(state)
       return summary
     } catch (e) {
-      console.warn("omarchy-scrabble: could not record statistics:", e)
+      console.warn("omascrabble: could not record statistics:", e)
       return null
     }
   }
@@ -176,7 +176,7 @@ Item {
     printErrors: false
     onLoaded: saves.applyGameText(text())
     onLoadFailed: function(err) { saves.applyGameText("") }
-    onSaveFailed: function(err) { saves.lastError = "save failed: " + err; console.warn("omarchy-scrabble: game save failed", err) }
+    onSaveFailed: function(err) { saves.lastError = "save failed: " + err; console.warn("omascrabble: game save failed", err) }
   }
 
   FileView {
@@ -211,7 +211,7 @@ Item {
     id: mkdirProc
     command: ["mkdir", "-p", "--", saves.stateDir + "/archive"]
     onExited: function(code) {
-      if (code !== 0) console.warn("omarchy-scrabble: cannot create " + saves.stateDir)
+      if (code !== 0) console.warn("omascrabble: cannot create " + saves.stateDir)
       saves.directoryReady = true
     }
   }

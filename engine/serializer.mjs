@@ -13,7 +13,7 @@ import { normalizeRules } from "./rules.mjs"
 import { isRngState } from "./rng.mjs"
 import { CELL_COUNT, inBounds, cellIndex } from "./board.mjs"
 
-export const SAVE_FORMAT = "omarchy-scrabble-save"
+export const SAVE_FORMAT = "omascrabble-save"
 export const SAVE_VERSION = 1
 
 // MIGRATIONS[n] upgrades a version-n document to version n+1, in place.

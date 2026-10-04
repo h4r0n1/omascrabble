@@ -7,7 +7,7 @@ import qs.Commons
 //
 // Runs inside the existing omarchy-shell (no second Quickshell instance).
 // The host summons it with
-//     omarchy-shell shell toggle omarchy-scrabble
+//     omarchy-shell shell toggle omascrabble
 // and calls open(payloadJson) / close(); `keepLoaded: true` in the manifest
 // keeps this item, and the game in it, alive between summons.
 //
@@ -18,7 +18,7 @@ import qs.Commons
 Item {
   id: root
 
-  readonly property string selfId: "omarchy-scrabble"
+  readonly property string selfId: "omascrabble"
   // Must match manifest.json "version"; a mismatch means the files on disk
   // were updated while this (keep-loaded) code kept running.
   readonly property string codeVersion: "0.1.0"
@@ -65,13 +65,13 @@ Item {
   }
 
   // ------------------------------------------------------- IPC helpers
-  // omarchy-shell shell call omarchy-scrabble status ""
+  // omarchy-shell shell call omascrabble status ""
   function status(arg) {
     var app = appLoader.item
     return app ? app.controller.statusJson() : JSON.stringify({ loaded: false })
   }
 
-  // omarchy-shell shell call omarchy-scrabble newGame '{"mode":"human_vs_ai","difficulty":"expert"}'
+  // omarchy-shell shell call omascrabble newGame '{"mode":"human_vs_ai","difficulty":"expert"}'
   // Starts a game (opening the window); `demo` starts computer against
   // computer, which never counts in the statistics.
   function newGame(arg) {
@@ -102,7 +102,7 @@ Item {
   // returns the path — for bug reports and testing.
   function snapshot(arg) {
     var dir = Quickshell.env("XDG_RUNTIME_DIR") || "/tmp"
-    var path = dir + "/omarchy-scrabble-snapshot.png"
+    var path = dir + "/omascrabble-snapshot.png"
     if (!content.visible) return "hidden"
     content.grabToImage(function(result) { result.saveToFile(path) })
     return path
@@ -130,7 +130,7 @@ Item {
       item.pluginDir = root.pluginDir
       item.windowVisible = Qt.binding(function() { return root.opened })
     }
-    onStatusChanged: if (status === Loader.Error) console.warn("omarchy-scrabble: services failed to load")
+    onStatusChanged: if (status === Loader.Error) console.warn("omascrabble: services failed to load")
   }
 
   // ---------------------------------------------------------------- window
@@ -197,7 +197,7 @@ Item {
             width: parent.width
             wrapMode: Text.WordWrap
             text: "Une erreur empêche le chargement de l’interface. Le shell n’est pas affecté et votre partie sauvegardée est intacte. "
-              + "Une mise à jour d’Omarchy ou du plugin peut en être la cause : essayez « omarchy plugin update omarchy-scrabble »."
+              + "Une mise à jour d’Omarchy ou du plugin peut en être la cause : essayez « omarchy plugin update omascrabble »."
             color: Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.7)
             font.family: Style.font.family
             font.pixelSize: Style.font.body

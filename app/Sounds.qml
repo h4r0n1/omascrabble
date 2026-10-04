@@ -24,7 +24,7 @@ Item {
     onStatusChanged: {
       if (status === Loader.Error) {
         sounds.unavailable = true
-        console.warn("omarchy-scrabble: sounds unavailable (QtMultimedia missing?)")
+        console.warn("omascrabble: sounds unavailable (QtMultimedia missing?)")
       }
     }
   }

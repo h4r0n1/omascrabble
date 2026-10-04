@@ -165,7 +165,7 @@ export function buildDawg(words, alphabet, options) {
   }
   const packed = builder.finish()
   const header = {
-    format: "omarchy-scrabble-dawg", version: 1, alphabet: alphabet, letterBits: packed.letterBits,
+    format: "omascrabble-dawg", version: 1, alphabet: alphabet, letterBits: packed.letterBits,
     tierBits: tierBits, edges: packed.edges.length, root: packed.root, words: packed.words, checksum: ""
   }
   return new Dawg(packed.edges, header, { trusted: true })

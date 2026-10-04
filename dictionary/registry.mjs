@@ -4,7 +4,7 @@
 //
 // Paths: `file`/`formsFile` are relative to the plugin directory for bundled
 // data, or to the user dictionary directory
-// ($XDG_DATA_HOME/omarchy-scrabble/dictionaries) for installed data.
+// ($XDG_DATA_HOME/omascrabble/dictionaries) for installed data.
 
 import { OpenFrenchDictionaryProvider, OPEN_FRENCH_ID } from "./open-french.mjs"
 import { ODS9DictionaryProvider, ODS9_ID } from "./ods9.mjs"

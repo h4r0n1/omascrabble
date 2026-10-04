@@ -1,12 +1,14 @@
 {
   "schemaVersion": 1,
-  "id": "omarchy-scrabble",
-  "name": "Omarchy Scrabble",
+  "id": "omascrabble",
+  "name": "Omascrabble",
   "version": "0.1.0",
   "author": "Omascrabble contributors",
   "license": "MIT",
-  "description": "A beautiful French classic Scrabble game for Omarchy. Independent community project, not affiliated with the SCRABBLE trademark owners. Open French lexicon (Grammalecte, MPL-2.0), algorithmic AI, offline. Toggle with: omarchy-shell shell toggle omarchy-scrabble",
-  "kinds": ["panel"],
+  "description": "A beautiful French classic Scrabble game for Omarchy. Independent community project, not affiliated with the SCRABBLE trademark owners. Open French lexicon (Grammalecte, MPL-2.0), algorithmic AI, offline. Toggle with: omarchy-shell shell toggle omascrabble",
+  "kinds": [
+    "panel"
+  ],
   "keepLoaded": true,
   "entryPoints": {
     "panel": "Scrabble.qml"

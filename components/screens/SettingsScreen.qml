@@ -242,7 +242,7 @@ FocusScope {
           font.pixelSize: page.theme.fontSmall
           text: "Le lexique ouvert est dérivé du « Lexique des formes fléchies du français » de Grammalecte (Olivier R., Dicollecte), version 7.7, publié sous licence Mozilla Public License 2.0. Il n’est pas l’Officiel du Scrabble (ODS) : certains mots acceptés par l’ODS en sont absents, et inversement. "
             + "Les accents et les ligatures (é, ç, œ…) se jouent sans accent ; une entrée contenant tout autre caractère (tiret, apostrophe, ñ…) est écartée, jamais tronquée.\n\n"
-            + "L’ODS 9, référence officielle 2024–2027, est sous licence et n’est pas fourni. Avec une licence, sa liste peut être compilée par tools/build-dictionary.mjs dans ~/.local/share/omarchy-scrabble/dictionaries/ods9.dawg ; il apparaîtra alors dans « Nouvelle partie ».\n\n"
+            + "L’ODS 9, référence officielle 2024–2027, est sous licence et n’est pas fourni. Avec une licence, sa liste peut être compilée par tools/build-dictionary.mjs dans ~/.local/share/omascrabble/dictionaries/ods9.dawg ; il apparaîtra alors dans « Nouvelle partie ».\n\n"
             + "Jeu : licence MIT. Projet communautaire indépendant ; SCRABBLE® est une marque de ses propriétaires respectifs, sans lien avec ce projet."
         }
       }

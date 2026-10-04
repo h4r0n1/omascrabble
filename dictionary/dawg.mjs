@@ -19,7 +19,7 @@
 // File format: one line of JSON header, a newline, then the edges as base64
 // (little-endian bytes) on a single line. The data is parsed, never executed.
 
-export const DAWG_FORMAT = "omarchy-scrabble-dawg"
+export const DAWG_FORMAT = "omascrabble-dawg"
 export const DAWG_VERSION = 1
 
 const B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
@@ -59,7 +59,7 @@ export function parseDawgHeader(text) {
   }
   if (!header || typeof header !== "object" || Array.isArray(header))
     throw new DawgError("BAD_HEADER", "dictionary header is not an object")
-  if (header.format !== DAWG_FORMAT) throw new DawgError("BAD_FORMAT", "not an omarchy-scrabble dictionary")
+  if (header.format !== DAWG_FORMAT) throw new DawgError("BAD_FORMAT", "not an omascrabble dictionary")
   if (header.version !== DAWG_VERSION) throw new DawgError("BAD_VERSION", "unsupported dictionary format version " + header.version)
   const intIn = (v, lo, hi) => Number.isInteger(v) && v >= lo && v <= hi
   if (typeof header.alphabet !== "string" || header.alphabet.length < 1 || header.alphabet.length > 64)
