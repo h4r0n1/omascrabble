@@ -28,12 +28,13 @@ FocusScope {
       return "Contre l’ordinateur" + (ai ? " · " + (Difficulty.DIFFICULTY_LABELS[ai.difficulty] || "") : "")
     }
     if (g.mode === "human_vs_human") return "Deux joueurs locaux"
+    if (g.mode === "ai_vs_ai") return "Démonstration"
     return "Entraînement"
   }
 
   function scoreLine(g) {
     if (!g) return ""
-    return g.players.map(function(p) { return p.name + " " + p.score }).join("   ·   ")
+    return g.players.map(function(p) { return p.name + "\u00a0: " + p.score }).join("   ·   ")
   }
 
   Keys.onReturnPressed: canResume ? resumeRequested() : newGameRequested()
