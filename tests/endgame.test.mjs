@@ -76,6 +76,7 @@ export function register(t) {
     t.equal(r.state.end.reason, END_REASON.TIMEOUT)
     t.equal(r.state.players[0].timeUsedMs, 60000)
     t.ok(r.state.end.adjustments[0] < 0 && r.state.end.adjustments[1] < 0)
+    t.equal(r.state.end.winner, 1, "the player whose clock ran out loses")
   })
 
   t.test("overtime penalty policy keeps playing and charges at the end", function() {

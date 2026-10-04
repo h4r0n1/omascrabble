@@ -55,7 +55,7 @@ Item {
     GameButton {
       id: shuffle
       theme: controls.theme; icon: "shuffle"; variant: "ghost"; focusable: false
-      enabled: controls.controller && controls.controller.hasGame && !controls.controller.isOver
+      enabled: controls.controller && controls.controller.isActive && controls.controller.game.players[controls.controller.viewer].kind === "human"
       tooltip: "Mélanger le chevalet"; shortcutHint: controls.label("shuffle")
       keyboardFocus: controls.buttons[controls.focusIndex] === shuffle
       onClicked: controls.shuffleRequested()

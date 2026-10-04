@@ -24,12 +24,18 @@ FocusScope {
   onVisibleChanged: if (visible) Qt.callLater(function() { end.forceActiveFocus() })
   Keys.onEscapePressed: closeRequested()
 
+  // "de" elides before a vowel or a mute h: Victoire d’Anne, de Paul.
+  function de(name) {
+    return /^[AEIOUYHÀÂÉÈÊËÎÏÔÛÙ]/i.test(name) ? "d’" + name : "de " + name
+  }
+
   function title() {
     if (!info) return ""
     if (g.players.length === 1) return "Partie terminée"
     if (info.winner === null) return "Égalité"
     if (g.mode === "human_vs_ai") return info.winner === me ? "Victoire" : "Défaite"
-    return "Victoire de " + g.players[info.winner].name
+    if (g.mode === "ai_vs_ai") return g.players[info.winner].name + " l’emporte"
+    return "Victoire " + de(g.players[info.winner].name)
   }
 
   // "Vous" and "Ordinateur" are labels; sentences need real French.
@@ -40,7 +46,7 @@ FocusScope {
     if (!info) return ""
     var a = info.actor
     var known = a !== null && a !== undefined && g.players[a]
-    var who = !known ? "" : isComputer(a) ? "L’ordinateur" : g.players[a].name
+    var who = !known ? "" : isComputer(a) && g.mode !== "ai_vs_ai" ? "L’ordinateur" : g.players[a].name
     if (info.reason === "out") return known && isYou(a)
       ? "Vous avez posé votre dernière lettre : le sac et votre chevalet sont vides."
       : who + " a posé sa dernière lettre : le sac et son chevalet sont vides."
@@ -52,8 +58,8 @@ FocusScope {
 
   function wordsTitle(index) {
     if (isYou(index)) return "VOS MOTS"
-    if (isComputer(index)) return "MOTS DE L’ORDINATEUR"
-    return "MOTS DE " + g.players[index].name.toUpperCase()
+    if (isComputer(index) && g.mode !== "ai_vs_ai") return "MOTS DE L’ORDINATEUR"
+    return ("MOTS " + de(g.players[index].name)).toUpperCase()
   }
 
   function duration(ms) {
@@ -275,7 +281,7 @@ FocusScope {
       spacing: end.theme.space
       GameButton { theme: end.theme; text: "Fermer"; variant: "ghost"; onClicked: end.closeRequested() }
       GameButton { theme: end.theme; text: "Revoir la partie"; icon: "replay"; variant: "secondary"; onClicked: end.replayRequested() }
-      GameButton { theme: end.theme; text: "Revanche"; variant: "secondary"; visible: end.g && end.g.mode !== "practice"; onClicked: end.rematchRequested() }
+      GameButton { theme: end.theme; text: "Revanche"; variant: "secondary"; visible: !!end.g && end.g.mode !== "practice" && end.g.mode !== "ai_vs_ai"; onClicked: end.rematchRequested() }
       GameButton { theme: end.theme; text: "NOUVELLE PARTIE"; variant: "primary"; onClicked: end.newGameRequested() }
     }
   }

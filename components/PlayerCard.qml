@@ -46,7 +46,7 @@ Rectangle {
     flyout.opacity = 0
     flyAnim.restart()
   }
-  readonly property real flyoutBase: scoreText.y - 4
+  readonly property real flyoutBase: column.y + scoreText.parent.y + (scoreText.implicitHeight - flyout.implicitHeight) / 2
 
   // Accent bar on the active card
   Rectangle {
@@ -155,9 +155,10 @@ Rectangle {
     }
   }
 
+  // Rises beside the score, inside the card.
   Text {
     id: flyout
-    x: card.alignRight ? card.theme.padding : parent.width - width - card.theme.padding
+    x: column.x + (card.alignRight ? column.width - scoreText.implicitWidth - width - 12 : scoreText.implicitWidth + 12)
     y: card.flyoutBase
     opacity: 0
     color: card.theme.accent
@@ -168,7 +169,7 @@ Rectangle {
       id: flyAnim
       ParallelAnimation {
         NumberAnimation { target: flyout; property: "opacity"; to: 1; duration: card.theme.anim(120) }
-        NumberAnimation { target: flyout; property: "y"; to: card.flyoutBase - 14; duration: card.theme.anim(420); easing.type: Easing.OutCubic }
+        NumberAnimation { target: flyout; property: "y"; to: card.flyoutBase - 10; duration: card.theme.anim(420); easing.type: Easing.OutCubic }
       }
       PauseAnimation { duration: card.theme.anim(500) }
       NumberAnimation { target: flyout; property: "opacity"; to: 0; duration: card.theme.anim(260) }

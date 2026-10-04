@@ -356,7 +356,8 @@ function finalize(state, reason, actor, events, ctx) {
   const finalScores = state.players.map(function(p, i) { return p.score + adjustments[i] })
   let winner = null
   if (n > 1) {
-    if (reason === END_REASON.RESIGN) {
+    // Resigning or running out of time loses, whatever the scores.
+    if (reason === END_REASON.RESIGN || reason === END_REASON.TIMEOUT) {
       let best = -Infinity
       for (let i = 0; i < n; i++) {
         if (i === actor) continue

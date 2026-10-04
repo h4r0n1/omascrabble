@@ -40,7 +40,7 @@ ShellRoot {
 
       App {
         id: app
-        pluginDir: rootShell.pluginDir
+        pluginDir: rootShell.scenario === "nodict" ? "/nonexistent-plugin-dir" : rootShell.pluginDir
         windowVisible: true
       }
 
@@ -214,16 +214,23 @@ ShellRoot {
     onTriggered: {
       var c = app.controller
       if (rootShell.step === 0) {
-        if (rootShell.appearance !== "") app.saves.saveSettings(Object.assign({}, app.saves.settings, { appearance: rootShell.appearance }))
+        if (rootShell.appearance !== "" || Quickshell.env("PREVIEW_HC") === "1")
+          app.saves.saveSettings(Object.assign({}, app.saves.settings, {
+            appearance: rootShell.appearance || app.saves.settings.appearance,
+            accessibility: Object.assign({}, app.saves.settings.accessibility, { highContrast: Quickshell.env("PREVIEW_HC") === "1" })
+          }))
+        if (rootShell.scenario === "nodict" && app.saves.ready && (app.dictionary.status === "missing" || app.dictionary.status === "error")) { rootShell.step = 1; return }
+        if (rootShell.scenario === "corrupt" && app.saves.ready && app.dictionary.status === "ready") { rootShell.step = 1; view.screen = "home"; console.log("CORRUPT problem " + JSON.stringify(app.saves.problem)); return }
         if (app.dictionary.status !== "ready" || !app.saves.ready) return
         rootShell.step = 1
         var sc = rootShell.scenario
         if (sc === "home") { view.screen = "home"; return }
         if (sc === "setup") { view.screen = "setup"; return }
         var mode = sc === "practice" ? "practice" : sc === "hvh" ? "human_vs_human" : "human_vs_ai"
-        c.newGame({ mode: mode, difficulty: "expert", timeMinutes: 20, dictionary: "open-fr", validation: sc === "challenge" || sc === "challenge-ai" ? "challenge" : "immediate", firstPlayer: "human" })
+        c.newGame({ mode: mode, difficulty: "expert", timeMinutes: sc === "timeout" ? 0.02 : 20, dictionary: "open-fr", validation: sc === "challenge" || sc === "challenge-ai" ? "challenge" : "immediate", firstPlayer: "human" })
         view.showGame()
-        if (sc === "start" || sc === "flow" || sc === "challenge-ai" || sc === "keys") return
+        if (sc === "start" || sc === "flow" || sc === "challenge-ai" || sc === "keys" || sc === "timeout") return
+        if (sc === "hvh") { c.applyGameAction({ type: "pass", player: 0 }); console.log("HVH handover=" + c.handoverPending); return }
         rootShell.selfPlay(sc === "end" ? 80 : 12)
         if (sc === "pending" || sc === "midgame" || sc === "narrow") rootShell.placePending(3)
         if (sc === "settings") view.overlay = "settings"
@@ -231,6 +238,7 @@ ShellRoot {
         if (sc === "end") { if (c.isActive) c.resign() }
         if (sc === "joker") c.jokerRequest = { tileId: 0, row: 0, col: 0 }
         if (sc === "exchange") view.openExchange()
+        if (sc === "practice") c.requestHint()
         return
       }
       if (rootShell.scenario === "keys") { rootShell.runKeys(); return }
@@ -239,7 +247,8 @@ ShellRoot {
         return
       }
       rootShell.step++
-      if (rootShell.step === 14) {
+      if (rootShell.scenario === "timeout" && rootShell.step === 30) console.log("TIMEOUT " + app.controller.statusJson())
+      if (rootShell.step === (rootShell.scenario === "timeout" ? 30 : 14)) {
         content.grabToImage(function(result) {
           result.saveToFile(rootShell.output)
           console.log("PREVIEW_SAVED " + rootShell.output)
