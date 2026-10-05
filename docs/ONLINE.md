@@ -5,17 +5,19 @@ both machines are equal, both run the whole game, and neither can see the
 other's rack or the order of the bag. This is an optional add-on: the base
 game keeps its one-line install and stays fully offline.
 
-Status: the encrypted bag (`net/deck.py`) is done and tested. Everything
-below it is the plan.
+Status: built and tested end to end over a direct connection (two game
+processes playing a whole game through the helper). The Tox transport
+(`net/tox_transport.py`) is tested once `toxcore` is installed.
 
 ## Pieces
 
 | Piece | Where | Job |
 |---|---|---|
 | Encrypted bag | `net/deck.py` | Shuffling, private draws, reveals, reshuffles, end audit. Pure Python, no I/O. |
-| Online helper | `net/` (to do) | Python, standard library only, started by the game. Owns the keys and the bag, talks to the other machine, speaks JSON lines with the game on stdin/stdout. |
-| Transport | helper (to do) | Tox through `libtoxcore` (ctypes, no compiling): invite links, no server, encrypted, works across the internet. A local socket transport for tests. |
-| Game side | engine + controller (to do) | Tiles whose letter is unknown, moves applied on both machines, state fingerprints, the online screens. |
+| Session | `net/session.py` | The protocol between the two helpers: invitation, proposal, seed, dealing, draws, checked moves, reshuffles, audit. Numbered messages, resent after a reconnection; saved after every change (0600). |
+| Online helper | `net/online.py` | Python, standard library only, started by the game. JSON lines with the game on stdin/stdout. |
+| Transport | `net/online.py`, `net/tox_transport.py` | Tox through `libtoxcore` (ctypes, no compiling) for real games; a direct TCP connection for tests (`OMASCRABBLE_TRANSPORT=tcp`). |
+| Game side | `engine/game.mjs`, `controller/GameController.qml`, `app/OnlineService.qml`, `components/screens/OnlineScreen.qml` | Hidden tiles, moves applied on both machines, fingerprints, the online screens. |
 
 The user installs `toxcore` themselves (`sudo pacman -S toxcore`) when they
 turn on online play; the game never runs sudo. Without it, everything else
@@ -69,27 +71,41 @@ Commit-reveal: each side sends the hash of a random value, then the value.
 The combined value seeds the game RNG and picks the first player; neither side
 can change its value after seeing the other's.
 
-## Engine changes (to do)
+## Engine changes
 
 - Tiles with an unknown letter (`letter: null`) and a way to fill letters in
   as they are revealed (copy-on-write, the tile map is shared between states).
 - Unseen-tile counts from the tile set minus what the player can see, instead
   of adding up bag letters.
-- `planDraw(state, player, count)`: the handles the next draw will take, so the
-  helpers can deal before the move is applied.
-- Exchanges and withdrawn moves accept the reshuffled bag (`newBag`) in online
-  games.
-- End of game waits for the racks to be revealed before computing the final
-  adjustments.
+- Draws need no planning: a move is applied on both machines (same RNG, same
+  handles), then the drawer's helper opens the drawn handles with the other
+  side's keys.
+- After an exchange or a withdrawn move, `replaceBag(state, handles)` swaps
+  the bag for the reshuffled one (fresh handles; the old ones are retired).
+- An online game's end always waits for the end-of-game reveal
+  (`end.awaitingReveal`), then `completeEnd` computes the adjustments. Both
+  copies must agree, so this doesn't depend on what each copy already knows.
+- `fingerprint(state)` digests what both copies must agree on.
 
-## Messages between the two helpers (to do)
+## Messages between the two helpers
 
-`hello` (versions, word list), `commit` / `open` (seed), `deck1`..`deck4`
-(setup), `key` (private key for drawn handles), `move` (action + revealed
-tiles + elapsed time + fingerprint), `reshuffle1`..`reshuffle4`, `racks` (end
-reveal), `audit` (all keys), `resign`, `bye`. Big numbers travel as hex
-strings. Every incoming message is checked (size, shape, order) and treated
-as untrusted data.
+`hello` (protocol version, name, how far this side got — the other resends
+the rest of its log), then numbered: `propose` / `accept` / `decline`,
+`commit` / `open` (seed), `deck1`..`deck4` (setup), `keys` (private keys for
+drawn handles), `move` (action, keys and claims for the tiles played,
+fingerprint, move index), `rs1`..`rs4` (reshuffle), `audit` (all keys),
+`bye`. Big numbers travel as hex strings. Every incoming message is checked
+(size, shape, order) and treated as untrusted data.
+
+## Game ↔ helper
+
+Commands: `hello`, `invite {config}`, `join {link}`, `accept`, `decline`,
+`cancel`, `resume {gameId, moves}`, `give {handles}`, `open {handles}`,
+`move {action, reveal, fp, index}`, `reshuffle {handles}`, `audit {inPlay}`.
+Events: `ready {transport}`, `invite {link}`, `peer`, `proposal`, `accepted`,
+`declined`, `started {seat, seed, first, …}`, `revealed {tiles}`,
+`action {action, tiles, fp, index}`, `rebag {from, handles}`,
+`audited {tiles}`, `link {state}`, `cheat`, `error {code}`.
 
 ## Performance
 

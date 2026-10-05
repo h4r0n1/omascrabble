@@ -19,8 +19,10 @@ omarchy-shell shell toggle omascrabble
 - Two game languages, chosen per game: French (102 tiles, French values, an
   open French word list) or English (100 tiles, English values, an open
   English word list).
-- Three modes: against the computer, two players at one keyboard, solo
-  practice (hints and "best possible move" after each turn). A
+- Four modes: against the computer, two players at one keyboard, solo
+  practice (hints and "best possible move" after each turn), and **online**
+  with a friend on another computer — invited by a link, no server, no
+  account, no referee (optional add-on, see *Online play*). A
   computer-vs-computer demonstration is available over IPC.
 - A real algorithmic AI (no LLM) at four levels — Beginner, Casual, Expert,
   Champion — that sees only what a player may see, with rack values tuned for
@@ -114,6 +116,10 @@ rm -rf ~/.local/state/omascrabble          # saved game, settings, statistics
 rm -rf ~/.local/share/omascrabble          # downloaded definitions, if any
 ```
 
+The online identity and online games live inside `~/.local/state/omascrabble`
+(`online/`), so the first line removes them too. If you installed `toxcore`
+only for Omascrabble: `sudo pacman -Rs toxcore`.
+
 Remove the keybinding or menu entry you added by hand, if any. Nothing else
 is left behind.
 
@@ -178,6 +184,16 @@ goes through `engine/game.mjs` `applyAction()`, which re-validates it.
 ```bash
 node tests/run.mjs [filter]
 tests/run-qml.sh
+python3 -m unittest discover -s tests/net     # online: bag, sessions, helpers
+```
+
+Online play end to end — two game processes playing each other through the
+real helper over local TCP:
+
+```bash
+touch /tmp/link
+OMASCRABBLE_TRANSPORT=tcp PREVIEW_LINK_FILE=/tmp/link PREVIEW_TIMEOUT=400 dev/preview.sh online-host &
+OMASCRABBLE_TRANSPORT=tcp PREVIEW_LINK_FILE=/tmp/link PREVIEW_TIMEOUT=400 dev/preview.sh online-guest
 ```
 
 Covered: board geometry and premium layout, placement rules, every scoring
@@ -187,6 +203,50 @@ timeout, resignation), challenges and penalties, save round-trips and
 corruption, the dictionary format and its integrity checks, the move generator
 against a brute-force oracle, AI legality across complete games, statistics and
 settings. Tests use fixed seeds.
+
+## Online play (optional)
+
+Play with a friend on another Omarchy machine. **New game → Online → Invite**
+gives you a one-time link (`omascrabble://tox/…`); send it any way you like.
+Your friend opens **Home → Join a game**, pastes it and accepts your
+invitation; the two machines shuffle the bag together and the game starts on
+both. Later games with the same friend reconnect by themselves; a game
+carries on after a restart or a dropped connection, and a notification tells
+you when it's your turn while the window is closed.
+
+**Install once** (the rest of the game doesn't need it):
+
+```bash
+sudo pacman -S toxcore
+```
+
+The game never runs sudo; until the package is there, the online screen shows
+this command. Python 3 (standard library) is also used, as for definitions.
+
+**How it works.**
+
+- *Network:* [Tox](https://tox.chat), a peer-to-peer network: end-to-end
+  encrypted, no account, no server run by this project. Public Tox bootstrap
+  nodes (list from `nodes.tox.chat`, cached) help the two machines find each
+  other and can relay encrypted packets; they can't read them. Your Tox
+  identity is created on first use and stays in
+  `~/.local/state/omascrabble/online` (readable by you only).
+- *No referee:* both machines run the whole game with the same engine and
+  check every move; after each move they compare a fingerprint of the game,
+  and a mismatch stops the game rather than letting the copies drift.
+- *A fair bag:* the bag is encrypted by both machines (commutative
+  encryption, "mental poker"): neither knows its order, each player can open
+  only their own draws, every tile played is checked on the spot, tiles going
+  back into the bag (exchanges, withdrawn moves) are reshuffled by both, and
+  at the end both machines publish their keys and audit the whole game. A
+  false tile makes the game invalid on both screens.
+- *Who starts* is drawn by both machines together (commit-reveal); neither can
+  choose it.
+- *Clocks:* each machine times its own player; the opponent's timeout can be
+  claimed 15 seconds after their clock reaches zero. The clock doesn't pause
+  when the window is hidden in an online game.
+
+Details: [`docs/ONLINE.md`](docs/ONLINE.md).
 
 ## 8. Dictionary setup
 
