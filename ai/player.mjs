@@ -20,6 +20,10 @@ import { getTileset, letterValues } from "../engine/tileset.mjs"
 const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 const N = 15
 
+function languageOf(rules) {
+  try { return getTileset(rules && rules.tileset ? rules.tileset : "fr-classic").language } catch (e) { return "fr" }
+}
+
 function valuesFor(rules) {
   const v = letterValues(getTileset(rules && rules.tileset ? rules.tileset : "fr-classic"))
   return LETTERS.split("").map(function(l) { return v[l] || 0 })
@@ -78,7 +82,7 @@ function bestScore(gen, board, blanks, rack, rules) {
 }
 
 // Best letters to keep when exchanging: the subset with the highest leave.
-function bestExchange(rack, rackSize) {
+function bestExchange(rack, rackSize, language) {
   const letters = []
   for (let i = 0; i < 27; i++) for (let c = 0; c < rack[i]; c++) letters.push(i)
   let best = null
@@ -88,7 +92,7 @@ function bestExchange(rack, rackSize) {
     let kept = 0
     for (let b = 0; b < letters.length; b++) if (mask & (1 << b)) { keep[letters[b]]++; kept++ }
     if (kept >= letters.length) continue // must give at least one
-    const value = leaveValue(keep)
+    const value = leaveValue(keep, language)
     if (!best || value > best.value) best = { value: value, keep: keep, kept: kept }
   }
   return best
@@ -116,6 +120,7 @@ export function chooseAction(view, profileOrName, graph, options) {
   const deadline = Number.isFinite(opts.deadline) ? opts.deadline : started + profile.thinkMs[1]
   const rng = createRng(opts.seed === undefined || opts.seed === null ? randomSeed() : opts.seed)
   const rules = view.rules
+  const language = languageOf(rules)
   const values = valuesFor(rules)
   const gen = new MoveGenerator(graph, values)
   const arrays = boardArrays(view.board)
@@ -126,7 +131,7 @@ export function chooseAction(view, profileOrName, graph, options) {
   const opponentRackValue = opponentRack ? rackValueOf(opponentRack, values) : 0
 
   const collector = new CandidateCollector(Math.max(profile.candidatePool, profile.simulation ? profile.simulation.candidates : 0) + 4,
-    keyFunction(profile, { bagEmpty: bagEmpty }))
+    keyFunction(profile, { bagEmpty: bagEmpty, language: language }))
   gen.generate(arrays.board, arrays.blanks, rack, { minTier: profile.minTier, bingoTiles: rules.bingoTiles, bingoBonus: rules.bingoBonus }, collector)
   const moves = collector.moves()
   const info = { generated: collector.total, considered: moves.length, simulated: 0, difficulty: profile.id }
@@ -134,7 +139,7 @@ export function chooseAction(view, profileOrName, graph, options) {
   // Full judgement on the short list.
   for (const m of moves) {
     let equity = m.score
-    if (!bagEmpty) equity += profile.leaveWeight * leaveValue(m.leave)
+    if (!bagEmpty) equity += profile.leaveWeight * leaveValue(m.leave, language)
     equity -= profile.defenseWeight * dangerOf(arrays.board, m.tiles)
     equity += profile.premiumWeight * premiumUse(m.tiles, values)
     if (bagEmpty && profile.endgame !== "none") equity += endgameAdjustment(m.leave, opponentRackValue, values)
@@ -186,7 +191,7 @@ export function chooseAction(view, profileOrName, graph, options) {
   // Exchange when the rack is bad enough that a reset beats the best play.
   const canExchange = view.bagCount >= rules.exchangeMinBag
   if (canExchange && profile.exchangeWillingness > 0) {
-    const ex = bestExchange(rack, rules.rackSize)
+    const ex = bestExchange(rack, rules.rackSize, language)
     const bestPlay = moves.length ? moves[0].equity : -Infinity
     const margin = 6 / profile.exchangeWillingness
     if (ex && ex.value * Math.max(profile.leaveWeight, 0.5) > bestPlay + margin) {
@@ -202,7 +207,7 @@ export function chooseAction(view, profileOrName, graph, options) {
   if (moves.length === 0) {
     info.timeMs = clock() - started
     if (canExchange) {
-      const ex = bestExchange(rack, rules.rackSize)
+      const ex = bestExchange(rack, rules.rackSize, language)
       const ids = exchangeIds(view.rack, ex ? ex.keep : new Int8Array(27))
       if (ids.length > 0) {
         info.reason = "no-move-exchange"

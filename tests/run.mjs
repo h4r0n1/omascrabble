@@ -16,7 +16,9 @@ const read = function(rel) {
 
 const context = {
   openLexicon: read("dictionary/data/open-fr.dawg"),
-  openLexiconForms: read("dictionary/data/open-fr.forms.dawg")
+  openLexiconForms: read("dictionary/data/open-fr.forms.dawg"),
+  openEnglish: read("dictionary/data/open-en.dawg"),
+  openEnglishForms: read("dictionary/data/open-en.forms.dawg")
 }
 
 const runner = createRunner(context)

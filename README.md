@@ -1,19 +1,24 @@
 # Omascrabble
 
-A French classic Scrabble game for **Omarchy Quattro**, built as a native
+A classic Scrabble game, in French or English, for **Omarchy Quattro**, built as a native
 `omarchy-shell` panel plugin: QML/QtQuick inside the shell you already run, no
 browser, no Electron, no server, fully offline.
 
-- Classic rules: 15 × 15 board, the French 102-tile set, premium squares,
-  jokers, crossing words, the 50-point Scrabble bonus, exchanges, passes,
-  challenges, clocks, end-of-game adjustments.
+- Classic rules: 15 × 15 board, premium squares, jokers, crossing words, the
+  50-point bingo bonus, exchanges, passes, challenges, clocks, end-of-game
+  adjustments.
+- Two game languages, chosen per game: French (102 tiles, French values, an
+  open French word list) or English (100 tiles, English values, an open
+  English word list).
 - Three modes: against the computer, two players at one keyboard, solo
   practice (hints and "best possible move" after each turn). A
   computer-vs-computer demonstration is available over IPC.
-- A real algorithmic AI (no LLM) at four levels — Débutant, Casual, Expert,
-  Champion — that sees only what a player may see.
+- A real algorithmic AI (no LLM) at four levels — Beginner, Casual, Expert,
+  Champion — that sees only what a player may see, with rack values tuned for
+  each language.
 - Keyboard-first, mouse and drag-and-drop too; follows the Omarchy theme.
-- French interface throughout.
+- French or English interface (or follow the system language), independent
+  of the game language.
 
 > Independent community project. SCRABBLE® is a trademark of its respective
 > owners; this game is neither affiliated with nor endorsed by them, and uses
@@ -150,7 +155,27 @@ settings. Tests use fixed seeds.
 
 ## 8. Dictionary setup
 
-The bundled dictionary is **Français — Open Lexicon**: 407 142 playable words
+Two open word lists are bundled, one per game language. *New game* →
+*Game language* picks the tile set, the word list and the notation together.
+
+**English — Open Word List**: 246 093 playable words compiled from
+[SCOWL](http://wordlist.aspell.net/) 2020.12.07 (size 80, all English
+spellings — American, British, Canadian, Australian; MIT-like licence, see
+[`dictionary/data/LICENSE-SCOWL.txt`](dictionary/data/LICENSE-SCOWL.txt)). It
+is **neither TWL nor Collins Scrabble Words**: it is a spell-checker list, so
+some tournament words are missing and a few it accepts aren't in either list.
+Rebuild it with `node tools/build-dictionary.mjs --lang en --download`.
+
+**Collins.** Like ODS 9 below, Collins Scrabble Words is licensed and not
+included; a slot is ready for `~/.local/share/omascrabble/dictionaries/collins.dawg`
+(id `collins`, language `en`, `"official": true`).
+
+English games use the English notation: columns A–O, rows 1–15; `8H` is a
+horizontal word from row 8, column H, and `H8` a vertical one. French games
+keep the French notation: rows A–O, columns 1–15; `H8` horizontal, `8H`
+vertical.
+
+**Français — Open Lexicon**: 407 142 playable words
 compiled from Grammalecte's *Lexique des formes fléchies du français* 7.7
 (MPL-2.0). It is **not** the Officiel du Scrabble (ODS): some ODS words are
 missing and some words ODS rejects are accepted. It includes interjections,
@@ -169,35 +194,40 @@ character (hyphen, apostrophe, ñ…) is left out rather than stripped.
 `DictionaryProvider` slot is ready: compile the list into the game's format as
 `~/.local/share/omascrabble/dictionaries/ods9.dawg` (id `ods9`,
 `"official": true`, tile alphabet), and "Français — ODS 9 · Officiel" becomes
-selectable in *Nouvelle partie*. Nothing else changes.
+selectable in *New game*. Nothing else changes.
 
 ### Definitions (optional)
 
 Click a word in the history, the last-move panel or the end-of-game lists to
-see its definitions. They come from the **Wiktionnaire** (French Wiktionary,
-CC BY-SA 4.0, extracted by Kaikki.org) and are an optional pack, installed once:
+see its definitions. They come from **Wiktionary** (CC BY-SA 4.0, extracted by
+Kaikki.org) — the French Wiktionnaire for French games, the English Wiktionary
+for English games — as optional packs, one per game language, installed once:
 
 ```bash
-python3 ~/.config/omarchy/plugins/omascrabble/tools/install-definitions.py
+python3 ~/.config/omarchy/plugins/omascrabble/tools/install-definitions.py            # French, ~740 MB
+python3 ~/.config/omarchy/plugins/omascrabble/tools/install-definitions.py --lang en  # English, ~520 MB
 ```
 
-It streams about 700 MB, keeps only French entries playable in the game's
-dictionary (with up to three short definitions each, and a link from an
-inflected form to its base word), and writes small JSON shards to
-`~/.local/share/omascrabble/definitions`. Python 3 standard library only. The
-game reads the pack offline and never downloads anything itself; without it,
-the dialog shows the word's French spelling and the install command. Remove it
-with `rm -rf ~/.local/share/omascrabble/definitions`.
+Each streams its download, keeps only entries playable in that language's word
+list (with up to three short definitions each, and a link from an inflected
+form to its base word), and writes small JSON shards to
+`~/.local/share/omascrabble/definitions/<lang>`. Python 3 standard library
+only. The game reads the packs offline and never downloads anything itself;
+without the pack for the current game's language, the dialog shows the
+install command. Remove them with `rm -rf ~/.local/share/omascrabble/definitions`.
 
 ## 9. Configuration
 
-Everything is in the game's *Réglages*: appearance (follow Omarchy, light,
+Everything is in the game's *Settings* (*Réglages*): interface language
+(Français, English, or automatic from the system locale), appearance (follow Omarchy, light,
 dark, system), animations (automatic follows the desktop's reduced-motion
 preference), gameplay toggles, AI difficulty / thinking time / personality,
-accessibility (high contrast, larger tiles and text, premium labels MT MD LT
-LD ★) and every keyboard shortcut.
+accessibility (high contrast, larger tiles and text, premium labels — MT MD
+LT LD in French, TW DW TL DL in English — and ★) and every keyboard shortcut.
+The interface language and the game language are independent: an English
+game in a French interface works, and so does the reverse.
 
-Default keys: `Entrée` play · `Échap` recall tiles · `Espace` take/put a tile ·
+Default keys: `Enter` play · `Esc` recall tiles · `Espace` take/put a tile ·
 arrows move · `Tab` rack → board → buttons · letters on the board place tiles ·
 `R` shuffle · `P` pass · `E` exchange · `C` challenge · `N` new game ·
 `Ctrl+S` save · `H` hint · `Y` history · `F1` help. Hyprland's SUPER bindings
@@ -222,9 +252,9 @@ omarchy-shell shell call omascrabble snapshot ""   # PNG in $XDG_RUNTIME_DIR
 - **The window doesn't open:** `omarchy plugin list` should show
   `omascrabble` enabled; then `omarchy-shell shell toggle omascrabble`.
 - **An update has no effect:** `omarchy restart shell` (see *Updating*).
-- **"Dictionnaire introuvable":** the data files are missing or damaged;
+- **"Dictionary not found" / "Dictionnaire introuvable":** the data files are missing or damaged;
   `omarchy plugin update omascrabble` or reinstall.
-- **"Une sauvegarde n'a pas pu être lue":** the file was moved to
+- **"A saved file couldn’t be read" / "Une sauvegarde n'a pas pu être lue":** the file was moved to
   `~/.local/state/omascrabble/quarantine/`; nothing was deleted.
 - **Logs:** `quickshell log -p /usr/share/omarchy/shell -t 100 | grep -i scrabble`.
   A single `QObject::connect(QJSEngine, QtObject): invalid nullptr parameter`
@@ -234,5 +264,8 @@ omarchy-shell shell call omascrabble snapshot ""   # PNG in $XDG_RUNTIME_DIR
 
 ## Licence
 
-Code: MIT ([LICENSE](LICENSE)). Dictionary data in `dictionary/data/`:
-MPL-2.0. Sounds are original, generated by `tools/gen-sounds.py`.
+Code: MIT ([LICENSE](LICENSE)). Dictionary data in `dictionary/data/`: the
+French list is MPL-2.0 (Grammalecte), the English list is under SCOWL's
+MIT-like licence ([`LICENSE-SCOWL.txt`](dictionary/data/LICENSE-SCOWL.txt)).
+Optional definition packs, built on your machine, are CC BY-SA 4.0
+(Wiktionary). Sounds are original, generated by `tools/gen-sounds.py`.

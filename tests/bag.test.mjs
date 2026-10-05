@@ -1,4 +1,4 @@
-import { getTileset, createTiles, tileCount, letterValues } from "../engine/tileset.mjs"
+import { getTileset, createTiles, tileCount, letterValues, tilesetForLanguage } from "../engine/tileset.mjs"
 import { createRng, nextInt, nextUint32, cloneRng } from "../engine/rng.mjs"
 import { applyAction, tileView } from "../engine/game.mjs"
 import { serializeGame } from "../engine/serializer.mjs"
@@ -32,6 +32,21 @@ export function register(t) {
     }
     for (const letter in EXPECTED) t.equal(counts[letter], EXPECTED[letter][0], "count of " + letter)
     t.equal(letterValues(set)["?"], 0)
+  })
+
+  t.test("English set: 100 tiles, standard values", function() {
+    const en = getTileset("en-classic")
+    t.equal(en.language, "en")
+    t.equal(tileCount(en), 100)
+    const v = letterValues(en)
+    t.deepEqual([v.E, v.Q, v.Z, v.K, v.J, v.X, v.H, v["?"]], [1, 10, 10, 5, 8, 8, 4, 0])
+    const counts = {}
+    for (const tile of createTiles(en)) counts[tile.letter] = (counts[tile.letter] || 0) + 1
+    t.deepEqual([counts.E, counts.A, counts.I, counts.O, counts.S, counts["?"]], [12, 9, 9, 8, 4, 2])
+    const s = newGame({ rules: { tileset: "en-classic" } })
+    t.equal(s.bag.length + s.players[0].rack.length + s.players[1].rack.length, 100)
+    t.equal(tilesetForLanguage("en"), "en-classic")
+    t.equal(tilesetForLanguage("fr"), "fr-classic")
   })
 
   t.test("no duplicate tile identity", function() {

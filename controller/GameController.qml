@@ -617,6 +617,7 @@ QtObject {
     var mode = c.mode || "human_vs_ai"
     var minutes = Number(c.timeMinutes) || 0
     var rules = {
+      tileset: Tileset.tilesetForLanguage(provider.language()),
       validation: mode === "practice" ? "immediate" : (c.validation || "immediate"),
       challenge: { penalty: c.challengePenalty || "none", penaltyPoints: 10 },
       time: { totalMs: minutes * 60000, onTimeout: "end_game" }

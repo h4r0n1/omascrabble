@@ -36,7 +36,7 @@ Item {
   property bool formsSent: false
 
   // Which dictionaries exist on this machine, for the setup screen.
-  property var installed: ({ "open-fr": true })
+  property var installed: ({ "open-fr": true, "open-en": true })
   readonly property var choices: Registry.DICTIONARIES.map(function(d) {
     return { id: d.id, language: d.language, official: d.official, available: service.installed[d.id] === true }
   })
@@ -168,15 +168,24 @@ Item {
     onLoadFailed: function(err) { console.warn("omascrabble: display forms unavailable") }
   }
 
-  // Detect a user-installed ODS 9 without keeping its contents around.
+  // Detect user-installed licensed lists without keeping their contents around.
+  readonly property var bundledIds: Registry.DICTIONARIES.filter(function(d) { return d.location === "bundled" }).map(function(d) { return d.id })
+  function bundledMap() {
+    var m = {}
+    bundledIds.forEach(function(id) { m[id] = true })
+    return m
+  }
   Process {
     id: probe
-    command: ["sh", "-c", 'for f in "$@"; do [ -r "$f" ] && echo "$f"; done; true', "probe", service.userDictionaryDir + "/ods9.dawg"]
+    command: ["sh", "-c", 'for f in "$@"; do [ -r "$f" ] && echo "$f"; done; true', "probe"].concat(
+      Registry.DICTIONARIES.filter(function(d) { return d.location === "user" }).map(function(d) { return service.userDictionaryDir + "/" + d.file }))
     stdout: StdioCollector {
       waitForEnd: true
       onStreamFinished: {
-        var next = { "open-fr": true }
-        if (String(text).indexOf("ods9.dawg") !== -1) next["ods9"] = true
+        var next = service.bundledMap()
+        Registry.DICTIONARIES.forEach(function(d) {
+          if (d.location === "user" && String(text).indexOf("/" + d.file) !== -1) next[d.id] = true
+        })
         service.installed = next
       }
     }

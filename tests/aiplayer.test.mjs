@@ -8,6 +8,13 @@ import { newGame, setRack, placeWord, wordDictionary, tileConservation } from ".
 
 export const name = "AI player"
 
+let cachedEn = null
+function englishDictionary(ctx) {
+  if (!ctx.openEnglish) return null
+  if (!cachedEn) cachedEn = createProvider("open-en", decodeDawg(ctx.openEnglish))
+  return cachedEn
+}
+
 let cached = null
 function realDictionary(ctx) {
   if (!ctx.openLexicon) return null
@@ -15,9 +22,9 @@ function realDictionary(ctx) {
   return cached
 }
 
-function aiGame(seed, a, b, dict) {
+function aiGame(seed, a, b, dict, tileset) {
   return createGame({
-    mode: MODE.HUMAN_VS_AI, seed: seed, dictionary: dict.describe(),
+    mode: MODE.HUMAN_VS_AI, seed: seed, dictionary: dict.describe(), rules: tileset ? { tileset: tileset } : undefined,
     players: [{ name: "IA 1", kind: "ai", difficulty: a }, { name: "IA 2", kind: "ai", difficulty: b }]
   })
 }
@@ -53,6 +60,11 @@ export function register(t) {
     t.ok(leaveValue(counts("AEIO")) < leaveValue(counts("AENR")))
     t.ok(leaveValue(counts("Q")) < leaveValue(counts("QU")) + 1)
     t.equal(leaveValue(counts("")), 0)
+    // English: X and Z keep well, Q is far worse than in French, Y is a consonant.
+    t.ok(leaveValue(counts("X"), "en") > leaveValue(counts("X"), "fr"))
+    t.ok(leaveValue(counts("Q"), "en") < leaveValue(counts("Q"), "fr"))
+    t.ok(leaveValue(counts("?"), "en") > leaveValue(counts("S"), "en"))
+    t.equal(leaveValue(counts("ERS")), leaveValue(counts("ERS"), "fr"))
   })
 
   t.test("the AI only sees public information", function() {
@@ -153,6 +165,22 @@ export function register(t) {
       if (pair[1] === "expert" && end.end.winner === 1) expertWins++
     })
     t.ok(expertWins >= 1, "expert should win at least one of these games")
+  })
+
+  t.test("a complete English game keeps every rule (real lexicon)", function(ctx) {
+    const dict = englishDictionary(ctx)
+    if (!dict) t.skip("dictionary data not provided")
+    const end = playOut(t, aiGame(300, "expert", "casual", dict, "en-classic"), dict, 80, 50)
+    t.equal(end.status, "ended", "English game finished")
+    t.equal(Object.keys(end.tiles).length, 100, "played with the 100-tile English set")
+    const words = []
+    for (const m of end.moves) if (m.type === "play") for (const w of m.words) words.push(w.word)
+    t.ok(words.length > 10, "played real moves")
+    t.ok(words.every(function(w) { return dict.isValid(w) }), "every word is English")
+    // English notation: horizontal = row number then column letter (8H).
+    for (const m of end.moves.filter(function(m) { return m.type === "play" })) {
+      t.ok(m.direction === "H" ? /^\d+[A-O]$/.test(m.position) : /^[A-O]\d+$/.test(m.position), m.direction + " " + m.position)
+    }
   })
 
   t.test("champion look-ahead runs within its deadline (real lexicon)", function(ctx) {

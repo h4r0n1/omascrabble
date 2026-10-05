@@ -23,7 +23,9 @@ TestCase {
     var runner = Harness.createRunner({
       slow: true,
       openLexicon: readFixture("dictionary/data/open-fr.dawg"),
-      openLexiconForms: readFixture("dictionary/data/open-fr.forms.dawg")
+      openLexiconForms: readFixture("dictionary/data/open-fr.forms.dawg"),
+      openEnglish: readFixture("dictionary/data/open-en.dawg"),
+      openEnglishForms: readFixture("dictionary/data/open-en.forms.dawg")
     })
     for (var i = 0; i < All.SUITES.length; i++) runner.add(All.SUITES[i])
     var results = runner.run("")

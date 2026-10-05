@@ -7,22 +7,19 @@
 //          + premiumWeight × premium use bonus
 //          + endgame corrections
 //
-// The leave values are hand-tuned for French tiles: the joker and S are worth
-// keeping, E is the friendliest vowel, heavy consonants and duplicates hurt,
-// and a rack wants roughly two vowels for three consonants.
+// Leave values exist per tile language. French: the joker and S are worth
+// keeping, E is the friendliest vowel, heavy consonants and duplicates hurt.
+// English: close to the well-known single-tile leaves — X and Z keep well
+// (many short words, high values), Q and V are a burden, U is a poor vowel.
+// Either way a rack wants roughly two vowels for three consonants.
 
 import { PREMIUM_LAYOUT, PREMIUM } from "../engine/board.mjs"
 
 const N = 15
 const BLANK = 26
-const VOWEL = (function() {
-  const v = new Uint8Array(27)
-  for (const ch of "AEIOUY") v[ch.charCodeAt(0) - 65] = 1
-  return v
-})()
 
 // Value of keeping one copy of each letter, A..Z then the joker.
-const SINGLE = Float64Array.from([
+const SINGLE_FR = Float64Array.from([
   1.0,  // A
   -2.5, // B
   -0.5, // C
@@ -53,13 +50,64 @@ const SINGLE = Float64Array.from([
 ])
 
 // Cost of each extra copy of a letter.
-const DUPLICATE = Float64Array.from([
+const DUPLICATE_FR = Float64Array.from([
   -3.0, -4.0, -4.0, -3.5, -1.5, -4.0, -4.0, -4.0, -4.0, -6.0, -6.0, -2.5, -3.0,
   -2.5, -4.0, -3.5, -6.0, -2.5, -2.0, -2.5, -4.5, -5.0, -6.0, -6.0, -6.0, -6.0,
   -2.0
 ])
 
-export function leaveValue(counts) {
+const SINGLE_EN = Float64Array.from([
+  1.0,   // A
+  -3.5,  // B
+  -0.5,  // C
+  0.0,   // D
+  4.0,   // E
+  -3.0,  // F
+  -3.5,  // G
+  0.5,   // H
+  -1.5,  // I
+  -2.5,  // J
+  -3.5,  // K
+  -1.5,  // L
+  -0.5,  // M
+  -0.5,  // N
+  -2.5,  // O
+  -1.5,  // P
+  -11.5, // Q
+  1.5,   // R
+  7.5,   // S
+  -1.0,  // T
+  -4.5,  // U
+  -6.5,  // V
+  -4.0,  // W
+  3.5,   // X
+  -2.5,  // Y
+  3.0,   // Z
+  24.5   // blank
+])
+
+const DUPLICATE_EN = Float64Array.from([
+  -3.0, -4.0, -4.0, -3.0, -2.0, -4.0, -4.0, -4.0, -4.5, -6.0, -6.0, -3.0, -3.0,
+  -3.0, -3.5, -3.5, -6.0, -3.0, -3.0, -3.0, -5.0, -5.0, -5.0, -6.0, -5.0, -6.0,
+  -3.0
+])
+
+const TABLES = {
+  fr: { single: SINGLE_FR, duplicate: DUPLICATE_FR, vowels: "AEIOUY" },
+  en: { single: SINGLE_EN, duplicate: DUPLICATE_EN, vowels: "AEIOU" }
+}
+for (const lang in TABLES) {
+  const v = new Uint8Array(27)
+  for (const ch of TABLES[lang].vowels) v[ch.charCodeAt(0) - 65] = 1
+  TABLES[lang].vowel = v
+}
+
+// `language` is the tile set's language ("fr" by default).
+export function leaveValue(counts, language) {
+  const table = TABLES[language] || TABLES.fr
+  const SINGLE = table.single
+  const DUPLICATE = table.duplicate
+  const VOWEL = table.vowel
   let value = 0
   let tiles = 0
   let vowels = 0

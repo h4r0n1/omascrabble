@@ -50,7 +50,7 @@ Item {
 
   SystemPreferences { id: systemPreferences }
 
-  DefinitionsService { id: definitionsService }
+  DefinitionsService { id: definitionsService; language: gameController.gameLanguage }
 
   Sounds {
     id: soundPlayer

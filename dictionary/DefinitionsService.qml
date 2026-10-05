@@ -3,18 +3,28 @@ import Quickshell
 import Quickshell.Io
 import "normalize.mjs" as Normalize
 
-// Optional word definitions (Wiktionnaire, CC BY-SA 4.0), installed by
-// tools/install-definitions.py into $XDG_DATA_HOME/omascrabble/definitions as
-// small JSON shards. Shards are read on demand, asynchronously, and treated
+// Optional word definitions (Wiktionary, CC BY-SA 4.0), installed per game
+// language by tools/install-definitions.py into
+// $XDG_DATA_HOME/omascrabble/definitions/<lang> as small JSON shards. Shards are read on demand, asynchronously, and treated
 // as untrusted data: parsed, checked, never executed. Without the pack the
 // game simply says how to install it.
 Item {
   id: service
   visible: false
 
+  // Language of the words being looked up: the game's, not the interface's.
+  property string language: "fr"
   readonly property string packDir: {
     var x = Quickshell.env("XDG_DATA_HOME")
-    return (x && x.charAt(0) === "/" ? x : Quickshell.env("HOME") + "/.local/share") + "/omascrabble/definitions"
+    return (x && x.charAt(0) === "/" ? x : Quickshell.env("HOME") + "/.local/share") + "/omascrabble/definitions/" + (language === "en" ? "en" : "fr")
+  }
+  onPackDirChanged: {
+    cache = ({})
+    queue = []
+    waiting = ({})
+    checked = false
+    installed = false
+    manifest = null
   }
 
   property bool checked: false
@@ -59,11 +69,18 @@ Item {
     var next = queue[0]
     queue = queue.slice(1)
     shardFile.loadingPrefix = next
+    shardFile.loadingDir = packDir
     shardFile.path = ""
     shardFile.path = packDir + "/" + next + ".json"
   }
 
   function finish(prefix, data) {
+    if (shardFile.loadingDir !== packDir) {
+      // Read for a language that is no longer current: drop it.
+      shardFile.loadingPrefix = ""
+      Qt.callLater(service.pump)
+      return
+    }
     var c = Object.assign({}, cache)
     c[prefix] = data
     cache = c
@@ -111,6 +128,7 @@ Item {
       try {
         var m = JSON.parse(text())
         service.installed = !!m && m.format === "omascrabble-definitions" && m.version === 1
+          && (m.language === undefined || m.language === service.language)
         service.manifest = service.installed ? m : null
       } catch (e) {
         service.installed = false
@@ -123,6 +141,7 @@ Item {
   FileView {
     id: shardFile
     property string loadingPrefix: ""
+    property string loadingDir: ""
     printErrors: false
     onLoaded: {
       var data = {}

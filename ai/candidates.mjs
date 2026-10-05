@@ -38,10 +38,11 @@ export class CandidateCollector {
 // The stage-one key for a profile.
 export function keyFunction(profile, options) {
   const leaveWeight = options && options.bagEmpty ? 0 : profile.leaveWeight
+  const language = options && options.language
   const shortBias = profile.maxTilesPreferred < 7
   return function(gen) {
     let key = gen.score
-    if (leaveWeight > 0) key += leaveWeight * leaveValue(gen.rack)
+    if (leaveWeight > 0) key += leaveWeight * leaveValue(gen.rack, language)
     if (shortBias && gen.tilesUsed > profile.maxTilesPreferred) key -= 12 * (gen.tilesUsed - profile.maxTilesPreferred)
     return key
   }

@@ -1,0 +1,56 @@
+{
+  "id": "open-en",
+  "name": "English — Open Word List",
+  "shortName": "Open Word List",
+  "language": "en",
+  "official": false,
+  "description": "Open English word list derived from SCOWL. Not TWL or Collins Scrabble Words.",
+  "source": {
+    "format": "scowl",
+    "name": "SCOWL (Spell Checker Oriented Word Lists)",
+    "author": "Kevin Atkinson and contributors",
+    "version": "2020.12.07",
+    "url": "https://downloads.sourceforge.net/project/wordlist/SCOWL/2020.12.07/scowl-2020.12.07.tar.gz",
+    "file": "scowl-2020.12.07.tar.gz",
+    "sha256": "5587667caa20c4891390c2d42dbb4d5c4c3f41bee77af1457ece3ba23fb859cc",
+    "license": "MIT-like (SCOWL Copyright)"
+  },
+  "lexicalPolicy": {
+    "folds": "latin",
+    "rejectOtherCharacters": true,
+    "minLength": 2,
+    "maxLength": 15,
+    "scowlCategories": [
+      "english",
+      "american",
+      "british",
+      "british_z",
+      "canadian",
+      "australian"
+    ],
+    "scowlVariants": [
+      "",
+      "_variant_1"
+    ],
+    "scowlMaxSize": 80,
+    "excludeCapitalised": true,
+    "twoLetterVowellessAllowed": [
+      "SH"
+    ],
+    "excludeWords": [
+      "DKL",
+      "HHD",
+      "CSC",
+      "CSCH"
+    ],
+    "displayFormsOnlyAccented": true
+  },
+  "frequencyTiers": {
+    "comment": "SCOWL size level of the most common spelling: ≤35 → 3, ≤50 → 2, ≤60 → 1, else 0. Used by the AI vocabulary profiles.",
+    "scowlLevels": [
+      60,
+      50,
+      35
+    ]
+  }
+}

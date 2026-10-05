@@ -8,6 +8,8 @@
 
 import { OpenFrenchDictionaryProvider, OPEN_FRENCH_ID } from "./open-french.mjs"
 import { ODS9DictionaryProvider, ODS9_ID } from "./ods9.mjs"
+import { OpenEnglishDictionaryProvider, OPEN_ENGLISH_ID } from "./open-english.mjs"
+import { CollinsDictionaryProvider, COLLINS_ID } from "./collins.mjs"
 
 export const DICTIONARIES = Object.freeze([
   Object.freeze({
@@ -29,6 +31,25 @@ export const DICTIONARIES = Object.freeze([
     file: "ods9.dawg",
     formsFile: "ods9.forms.dawg",
     // licensed, never bundled
+  }),
+  Object.freeze({
+    id: OPEN_ENGLISH_ID,
+    language: "en",
+    tileset: "en-classic",
+    official: false,
+    location: "bundled",
+    file: "dictionary/data/open-en.dawg",
+    formsFile: "dictionary/data/open-en.forms.dawg"
+  }),
+  Object.freeze({
+    id: COLLINS_ID,
+    language: "en",
+    tileset: "en-classic",
+    official: true,
+    location: "user",
+    file: "collins.dawg",
+    formsFile: "collins.forms.dawg"
+    // licensed, never bundled
   })
 ])
 
@@ -39,8 +60,15 @@ export function dictionaryEntry(id) {
   return null
 }
 
+// The open dictionary of a game language.
+export function defaultDictionaryFor(language) {
+  return language === "en" ? OPEN_ENGLISH_ID : OPEN_FRENCH_ID
+}
+
 export function createProvider(id, dawg, forms) {
   if (id === OPEN_FRENCH_ID) return new OpenFrenchDictionaryProvider(dawg, { forms: forms })
   if (id === ODS9_ID) return new ODS9DictionaryProvider(dawg, { forms: forms })
+  if (id === OPEN_ENGLISH_ID) return new OpenEnglishDictionaryProvider(dawg, { forms: forms })
+  if (id === COLLINS_ID) return new CollinsDictionaryProvider(dawg, { forms: forms })
   throw new Error("unknown dictionary: " + id)
 }

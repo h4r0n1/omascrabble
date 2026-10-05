@@ -224,12 +224,14 @@ ShellRoot {
         if (rootShell.scenario === "nodict" && app.saves.ready && (app.dictionary.status === "missing" || app.dictionary.status === "error")) { rootShell.step = 1; return }
         if (rootShell.scenario === "corrupt" && app.saves.ready && app.dictionary.status === "ready") { rootShell.step = 1; view.screen = "home"; console.log("CORRUPT problem " + JSON.stringify(app.saves.problem)); return }
         if (app.dictionary.status !== "ready" || !app.saves.ready) return
+        var gameDict = Quickshell.env("PREVIEW_GAMELANG") === "en" ? "open-en" : "open-fr"
+        if (app.dictionary.dictionaryId !== gameDict) { app.dictionary.load(gameDict); return }
         rootShell.step = 1
         var sc = rootShell.scenario
         if (sc === "home") { view.screen = "home"; return }
         if (sc === "setup") { view.screen = "setup"; return }
         var mode = sc === "practice" ? "practice" : sc === "hvh" ? "human_vs_human" : "human_vs_ai"
-        c.newGame({ mode: mode, difficulty: "expert", timeMinutes: sc === "timeout" ? 0.02 : 20, dictionary: "open-fr", validation: sc === "challenge" || sc === "challenge-ai" ? "challenge" : "immediate", firstPlayer: "human" })
+        c.newGame({ mode: mode, difficulty: "expert", timeMinutes: sc === "timeout" ? 0.02 : 20, dictionary: gameDict, validation: sc === "challenge" || sc === "challenge-ai" ? "challenge" : "immediate", firstPlayer: "human" })
         view.showGame()
         if (sc === "start" || sc === "flow" || sc === "challenge-ai" || sc === "keys" || sc === "timeout") return
         if (sc === "hvh") { c.applyGameAction({ type: "pass", player: 0 }); console.log("HVH handover=" + c.handoverPending); return }

@@ -1,12 +1,15 @@
 #!/usr/bin/env node
-// Compiles an open French lexicon into the game's dictionary files.
+// Compiles an open word list into the game's dictionary files.
 //
+//   node tools/build-dictionary.mjs --download              # French (Grammalecte)
+//   node tools/build-dictionary.mjs --lang en --download    # English (SCOWL)
 //   node tools/build-dictionary.mjs --source path/to/lexique-grammalecte-fr-v7.7.zip
-//   node tools/build-dictionary.mjs --download
 //
 // Options:
+//   --lang fr|en      shorthand for --policy dictionary/policies/open-<lang>.json
 //   --policy <file>   lexical policy (default dictionary/policies/open-fr.json)
-//   --source <file>   the Grammalecte lexicon, .zip or extracted .txt
+//   --source <file>   the source named in the policy: the Grammalecte lexicon
+//                     (.zip or extracted .txt) or the SCOWL .tar.gz
 //   --download        fetch the archive named in the policy into tools/.cache/
 //   --out <dir>       output directory (default dictionary/data)
 //
@@ -18,7 +21,7 @@ import { createHash } from "node:crypto"
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs"
 import { dirname, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
-import { inflateRawSync } from "node:zlib"
+import { inflateRawSync, gunzipSync } from "node:zlib"
 import { DawgBuilder, encodeDawgFile } from "./dawg-builder.mjs"
 import { TILE_ALPHABET, DISPLAY_ALPHABET, foldWord, isPlayableForm, normalizeDisplayForm } from "../dictionary/normalize.mjs"
 import { decodeDawg } from "../dictionary/dawg.mjs"
@@ -30,6 +33,11 @@ function parseArgs(argv) {
   for (let i = 2; i < argv.length; i++) {
     const a = argv[i]
     if (a === "--policy") args.policy = resolve(argv[++i])
+    else if (a === "--lang") {
+      const lang = argv[++i]
+      if (lang !== "fr" && lang !== "en") throw new Error("--lang must be fr or en")
+      args.policy = join(ROOT, "dictionary/policies/open-" + lang + ".json")
+    }
     else if (a === "--source") args.source = resolve(argv[++i])
     else if (a === "--out") args.out = resolve(argv[++i])
     else if (a === "--download") args.download = true
@@ -72,6 +80,41 @@ function readZipEntry(buf, name) {
   throw new Error("entry not found in archive: " + name)
 }
 
+// Minimal tar reader: yields { name, data } for regular files.
+function* readTar(buf) {
+  let p = 0
+  while (p + 512 <= buf.length) {
+    const header = buf.subarray(p, p + 512)
+    if (header.every(function(b) { return b === 0 })) break
+    const name = header.toString("utf8", 0, 100).replace(/\0.*$/, "")
+    const size = parseInt(header.toString("utf8", 124, 136).replace(/\0.*$/, "").trim() || "0", 8)
+    const type = String.fromCharCode(header[156] || 48)
+    const start = p + 512
+    if (type === "0" || type === "\0") yield { name: name, data: buf.subarray(start, start + size) }
+    p = start + Math.ceil(size / 512) * 512
+  }
+}
+
+// SCOWL: the -words lists of the chosen categories up to a size level.
+// Returns rows in the shape the policy code expects.
+function parseScowl(archive, lp) {
+  const pattern = /\/final\/([a-z_]+?)(_variant_\d)?-words\.(\d+)$/
+  const rows = []
+  for (const entry of readTar(gunzipSync(archive))) {
+    const m = entry.name.match(pattern)
+    if (!m) continue
+    if (lp.scowlCategories.indexOf(m[1]) === -1 || lp.scowlVariants.indexOf(m[2] || "") === -1) continue
+    const size = Number(m[3])
+    if (size > lp.scowlMaxSize) continue
+    for (const line of entry.data.toString("latin1").split("\n")) {
+      const form = line.trim()
+      if (form) rows.push({ form: form, tags: [], notes: [], subdict: "*", freq: size, scowl: true })
+    }
+  }
+  if (!rows.length) throw new Error("no SCOWL word lists found in the archive")
+  return rows
+}
+
 async function loadSource(args, policy) {
   let path = args.source
   if (args.download) {
@@ -88,13 +131,20 @@ async function loadSource(args, policy) {
   if (!path) throw new Error("pass --source <file> or --download")
   const raw = readFileSync(path)
   const sha256 = createHash("sha256").update(raw).digest("hex")
-  if (policy.source.sha256 && path.endsWith(".zip") && policy.source.sha256 !== sha256)
+  if (policy.source.sha256 && !path.endsWith(".txt") && policy.source.sha256 !== sha256)
     throw new Error("source checksum mismatch: expected " + policy.source.sha256 + ", got " + sha256)
+  if (policy.source.format === "scowl") return { scowl: raw, sha256, path }
   const text = path.endsWith(".zip") ? readZipEntry(raw, policy.source.file).toString("utf8") : raw.toString("utf8")
   return { text, sha256, path }
 }
 
 function tierFor(word, index, tiers) {
+  if (tiers.scowlLevels) {
+    // SCOWL size: smaller is more common. scowlLevels = [≤ tier1, ≤ tier2, ≤ tier3].
+    let tier = 0
+    for (let i = 0; i < tiers.scowlLevels.length; i++) if (index <= tiers.scowlLevels[i]) tier = i + 1
+    return tier
+  }
   const thresholds = tiers.thresholds
   const short = tiers.shortWordPenalty
   if (short && word.length <= short.maxLength) index -= short.penalty
@@ -104,6 +154,10 @@ function tierFor(word, index, tiers) {
 }
 
 function rowRejection(row, lp) {
+  if (row.scowl) {
+    if (lp.excludeCapitalised && row.form.charAt(0) !== row.form.charAt(0).toLowerCase()) return "capitalised"
+    return null
+  }
   const tags = row.tags
   for (const t of tags) {
     if (lp.excludeTags.indexOf(t) !== -1) return "tag:" + t
@@ -173,7 +227,7 @@ async function main() {
   const policy = JSON.parse(readFileSync(args.policy, "utf8"))
   const lp = policy.lexicalPolicy
   const source = await loadSource(args, policy)
-  const rows = parseLexicon(source.text)
+  const rows = source.scowl ? parseScowl(source.scowl, lp) : parseLexicon(source.text)
 
   const rejected = new Map()
   const reject = function(reason) { rejected.set(reason, (rejected.get(reason) || 0) + 1) }
@@ -185,11 +239,16 @@ async function main() {
     const folded = foldWord(row.form)
     if (folded === null) { reject("character"); continue }
     if (!isPlayableForm(folded, lp)) { reject("length"); continue }
+    if (lp.excludeWords && lp.excludeWords.indexOf(folded) !== -1) { reject("excluded"); continue }
+    if (lp.twoLetterVowellessAllowed && folded.length === 2 && !/[AEIOUY]/.test(folded)
+        && lp.twoLetterVowellessAllowed.indexOf(folded) === -1) { reject("letter-plural"); continue }
     const shown = normalizeDisplayForm(row.form)
     if (shown === null) { reject("display-character"); continue }
     const prev = tiles.get(folded)
-    if (prev === undefined || row.freq > prev) tiles.set(folded, row.freq)
-    display.add(shown)
+    const better = row.scowl ? (prev === undefined || row.freq < prev) : (prev === undefined || row.freq > prev)
+    if (better) tiles.set(folded, row.freq)
+    // English spellings rarely carry accents: keep only those that do.
+    if (!lp.displayFormsOnlyAccented || /[^a-z]/.test(shown)) display.add(shown)
   }
 
   const tileWords = sortByAlphabet(Array.from(tiles.keys()), TILE_ALPHABET)
@@ -223,7 +282,9 @@ async function main() {
       sha256: source.sha256
     },
     lexicalPolicy: lp,
-    frequencyTiers: { thresholds: policy.frequencyTiers.thresholds, shortWordPenalty: policy.frequencyTiers.shortWordPenalty || null }
+    frequencyTiers: policy.frequencyTiers.scowlLevels
+      ? { scowlLevels: policy.frequencyTiers.scowlLevels }
+      : { thresholds: policy.frequencyTiers.thresholds, shortWordPenalty: policy.frequencyTiers.shortWordPenalty || null }
   }
 
   mkdirSync(args.out, { recursive: true })
@@ -231,7 +292,7 @@ async function main() {
   const displayFile = encodeDawgFile(displayPacked, DISPLAY_ALPHABET, 0, Object.assign({ kind: "display" }, meta))
   // Round-trip through the runtime reader before writing anything.
   const check = decodeDawg(tileFile)
-  for (const w of ["MAISON", "QI", "ETE", "COEUR"]) if (tiles.has(w) && !check.contains(w)) throw new Error("round-trip failed for " + w)
+  for (const w of ["MAISON", "QI", "ETE", "COEUR", "HOUSE", "QUIZ"]) if (tiles.has(w) && !check.contains(w)) throw new Error("round-trip failed for " + w)
   decodeDawg(displayFile)
   writeFileSync(join(args.out, policy.id + ".dawg"), tileFile)
   writeFileSync(join(args.out, policy.id + ".forms.dawg"), displayFile)

@@ -145,7 +145,11 @@ export function register(t) {
     const official = createProvider("ods9", ods)
     t.equal(official.isOfficial(), true)
     t.equal(official.name(), "Français — ODS 9")
-    t.equal(DICTIONARIES.filter(function(d) { return d.location === "bundled" }).length, 1)
+    // One bundled open list per language; licensed lists are never bundled.
+    const bundled = DICTIONARIES.filter(function(d) { return d.location === "bundled" })
+    t.deepEqual(bundled.map(function(d) { return d.language }).sort(), ["en", "fr"])
+    t.ok(bundled.every(function(d) { return !d.official }))
+    t.ok(DICTIONARIES.filter(function(d) { return d.official }).every(function(d) { return d.location === "user" }))
   })
 
   t.test("bundled open lexicon (real data)", function(ctx) {
@@ -161,5 +165,22 @@ export function register(t) {
       t.ok(!p.isValid(w), w + " should be invalid")
     if (forms) t.ok(p.lookup("ETE").displayForms.indexOf("été") !== -1)
     t.ok(p.tierOf("MAISON") >= 2, "maison is common")
+  })
+
+  t.test("bundled open English list (real data)", function(ctx) {
+    if (!ctx.openEnglish) t.skip("dictionary data not provided")
+    const d = decodeDawg(ctx.openEnglish)
+    const forms = ctx.openEnglishForms ? decodeDawg(ctx.openEnglishForms) : null
+    const p = createProvider("open-en", d, forms)
+    t.equal(p.isOfficial(), false)
+    t.equal(p.language(), "en")
+    t.ok(d.wordCount > 200000, "about 246k words, got " + d.wordCount)
+    for (const w of ["HOUSE", "HOUSES", "QI", "QAT", "ZA", "XU", "QUIZ", "COLOUR", "COLOR", "JEEZ", "CAFE", "NAIVE"])
+      t.ok(p.isValid(w), w + " should be valid")
+    for (const w of ["XQZ", "TOKYO", "LONDON", "BS", "MS", "HOUSEZ"])
+      t.ok(!p.isValid(w), w + " should be invalid")
+    if (forms) t.ok(p.lookup("CAFE").displayForms.indexOf("café") !== -1)
+    t.ok(p.tierOf("HOUSE") === 3, "house is common")
+    t.throws(function() { createProvider("collins", d) }, "the open list can't pose as Collins")
   })
 }

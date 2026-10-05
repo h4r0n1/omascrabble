@@ -1,6 +1,7 @@
 import { Board, PREMIUM, PREMIUM_LAYOUT, premiumAt, BOARD_SIZE, CELL_COUNT, inBounds, CENTER_ROW, CENTER_COL } from "../engine/board.mjs"
 import { previewMove, applyAction } from "../engine/game.mjs"
 import { REASON } from "../engine/reasons.mjs"
+import { positionLabel, parsePosition, cellLabel, rowLabel, colLabel } from "../engine/notation.mjs"
 import { newGame, setRack, placeWord, placementsFor, wordDictionary } from "./lib/fixtures.mjs"
 
 export const name = "Board"
@@ -117,5 +118,31 @@ export function register(t) {
     t.equal(r.words[0].score, 3, "AS: A on double letter + S")
     t.equal(r.words[1].score, 8, "MAISONS: no premium under the new S")
     t.equal(r.score, 11)
+  })
+
+  t.test("notation follows the game language", function() {
+    // Row 7 (eighth), column 3 (fourth).
+    t.equal(positionLabel("H", 7, 3), "H4", "French horizontal: row letter first")
+    t.equal(positionLabel("V", 7, 3), "4H", "French vertical: column number first")
+    t.equal(positionLabel("H", 7, 3, "en"), "8D", "English horizontal: row number first")
+    t.equal(positionLabel("V", 7, 3, "en"), "D8", "English vertical: column letter first")
+    t.equal(cellLabel(0, 14, "fr"), "A15")
+    t.equal(cellLabel(0, 14, "en"), "O1")
+    t.deepEqual([rowLabel(14, "en"), colLabel(14, "en"), rowLabel(14), colLabel(14)], ["15", "O", "O", "15"])
+    for (const style of ["fr", "en"]) for (const dir of ["H", "V"]) for (const [r, c] of [[0, 0], [7, 7], [14, 9], [10, 14]]) {
+      const label = positionLabel(dir, r, c, style)
+      t.deepEqual(parsePosition(label, style), { direction: dir, row: r, col: c }, style + " " + label)
+    }
+    t.equal(parsePosition("P1", "en"), null)
+    t.equal(parsePosition("16A", "fr"), null)
+  })
+
+  t.test("English games are written in English notation", function() {
+    const s = newGame({ rules: { tileset: "en-classic" } })
+    setRack(s, 0, "HOUSEAB")
+    const r = applyAction(s, { type: "play", player: 0, placements: placementsFor(s, 0, "HOUSE", 7, 5, "H") }, { dictionary: wordDictionary(["HOUSE"]) })
+    t.ok(r.ok, r.message)
+    t.equal(r.state.moves[0].position, "8F")
+    t.equal(r.state.moves[0].score, 2 * (4 + 1 + 1 + 1 + 1), "English values: H=4, double word on the star")
   })
 }

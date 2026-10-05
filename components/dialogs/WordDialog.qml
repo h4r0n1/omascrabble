@@ -22,7 +22,7 @@ Dialog {
   onDismissed: closed()
   Keys.onReturnPressed: closed()
 
-  readonly property string installCommand: "python3 ~/.config/omarchy/plugins/omascrabble/tools/install-definitions.py"
+  readonly property string installCommand: "python3 ~/.config/omarchy/plugins/omascrabble/tools/install-definitions.py" + (gameLanguage === "en" ? " --lang en" : "")
 
   onOpenChanged: if (open) load()
   onWordsChanged: if (open) load()
@@ -59,7 +59,9 @@ Dialog {
         Text {
           width: parent.width
           wrapMode: Text.WordWrap
-          text: dlg.theme.t("words.notInstalled")
+          text: dlg.theme.t("words.notInstalled", {
+            language: dlg.theme.t(dlg.gameLanguage === "en" ? "words.lang.en" : "words.lang.fr"),
+            size: dlg.theme.t(dlg.gameLanguage === "en" ? "words.size.en" : "words.size.fr") })
           color: dlg.theme.muted
           font.family: dlg.theme.fontFamily
           font.pixelSize: dlg.theme.fontBody

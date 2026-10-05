@@ -1,20 +1,23 @@
 #!/usr/bin/env python3
-"""Builds the optional definitions pack for Omascrabble.
+"""Builds an optional definitions pack for Omascrabble.
 
-    python3 tools/install-definitions.py            # download, build, install
+    python3 tools/install-definitions.py               # French (Wiktionnaire)
+    python3 tools/install-definitions.py --lang en     # English (Wiktionary)
     python3 tools/install-definitions.py --source extract.jsonl[.gz]
 
-The definitions come from the Wiktionnaire (French Wiktionary), as extracted
-by Kaikki.org (wiktextract), under CC BY-SA 4.0. The game never downloads
-anything: this script does it once, on request, then writes small JSON shards
-to $XDG_DATA_HOME/omascrabble/definitions (default ~/.local/share/...), which
-the game reads offline.
+The definitions come from Wiktionary — the French Wiktionnaire for French
+games, the English Wiktionary for English games — as extracted by Kaikki.org
+(wiktextract), under CC BY-SA 4.0. The game never downloads anything: this
+script does it once, on request, then writes small JSON shards to
+$XDG_DATA_HOME/omascrabble/definitions/<lang> (default ~/.local/share/...),
+which the game reads offline.
 
-Only French entries whose spelling is playable in the game's dictionary are
-kept (the word list is read from the plugin's own dictionary/data/open-fr.dawg,
+Only entries of that language whose spelling is playable in the game's own
+word list are kept (read from the plugin's dictionary/data/open-<lang>.dawg,
 so the pack always matches the game), with at most three short definitions
-each. The download (~700 MB compressed) is streamed and filtered on the fly;
-nothing large is written to disk. Python 3 standard library only.
+each. The download (French ~740 MB, English ~520 MB compressed) is streamed
+and filtered on the fly; nothing large is written to disk. Python 3 standard
+library only.
 """
 
 import argparse
@@ -30,7 +33,24 @@ import tempfile
 import time
 import urllib.request
 
-DEFAULT_SOURCE = "https://kaikki.org/frwiktionary/raw-wiktextract-data.jsonl.gz"
+LANGUAGES = {
+    "fr": {
+        "source": "https://kaikki.org/frwiktionary/raw-wiktextract-data.jsonl.gz",
+        "name": "Wiktionnaire (fr.wiktionary.org), extracted by Kaikki.org / wiktextract",
+    },
+    "en": {
+        "source": "https://kaikki.org/dictionary/English/kaikki.org-dictionary-English.jsonl.gz",
+        "name": "Wiktionary (en.wiktionary.org), extracted by Kaikki.org / wiktextract",
+    },
+}
+# English extracts give a bare part of speech; French ones a title ("Nom commun").
+POS_NAMES = {
+    "noun": "noun", "verb": "verb", "adj": "adjective", "adv": "adverb", "prep": "preposition",
+    "conj": "conjunction", "pron": "pronoun", "intj": "interjection", "det": "determiner",
+    "num": "numeral", "particle": "particle", "article": "article", "abbrev": "abbreviation",
+    "contraction": "contraction", "prefix": "prefix", "suffix": "suffix", "phrase": "phrase",
+}
+SKIPPED_POS = {"name", "character", "symbol", "letter"}
 PACK_FORMAT = "omascrabble-definitions"
 PACK_VERSION = 1
 MAX_SENSES = 3
@@ -38,12 +58,13 @@ MAX_GLOSS = 240
 HERE = os.path.dirname(os.path.abspath(__file__))
 PLUGIN = os.path.dirname(HERE)
 
-# Same folding as dictionary/normalize.mjs: French diacritics and ligatures
-# fold to tile letters; any other character makes the spelling unplayable.
+# Same folding as dictionary/normalize.mjs: diacritics and ligatures fold to
+# tile letters; any other character makes the spelling unplayable.
 FOLDS = {
     "à": "A", "â": "A", "ä": "A", "é": "E", "è": "E", "ê": "E", "ë": "E",
     "î": "I", "ï": "I", "ô": "O", "ö": "O", "ù": "U", "û": "U", "ü": "U",
-    "ÿ": "Y", "ç": "C", "œ": "OE", "æ": "AE",
+    "ÿ": "Y", "ç": "C", "œ": "OE", "æ": "AE", "á": "A", "í": "I", "ó": "O", "ú": "U",
+    "ñ": "N", "å": "A", "ø": "O",
 }
 
 
@@ -102,6 +123,8 @@ def clean_gloss(text):
 
 
 def entry_from(record):
+    if record.get("pos") in SKIPPED_POS:
+        return None
     senses = []
     lemma = None
     for sense in record.get("senses") or []:
@@ -117,8 +140,9 @@ def entry_from(record):
     if not senses:
         return None
     if lemma:
-        senses = senses[:1]  # "Première personne … de siéger" — the base word carries the meaning
-    entry = {"w": record["word"], "p": str(record.get("pos_title") or record.get("pos") or ""), "d": senses}
+        senses = senses[:1]  # "plural of house" — the base word carries the meaning
+    pos = record.get("pos_title") or POS_NAMES.get(record.get("pos"), record.get("pos")) or ""
+    entry = {"w": record["word"], "p": str(pos), "d": senses}
     if lemma and lemma != record["word"]:
         entry["of"] = lemma
     return entry
@@ -126,7 +150,7 @@ def entry_from(record):
 
 def open_source(source):
     if re.match(r"^https?://", source):
-        print("Téléchargement de", source, file=sys.stderr)
+        print("Downloading", source, file=sys.stderr)
         stream = urllib.request.urlopen(source, timeout=60)
         total = int(stream.headers.get("Content-Length") or 0)
     else:
@@ -153,22 +177,23 @@ class CountingReader(io.RawIOBase):
         return n
 
 
-def build(source, lexicon, out_dir):
+def build(lang, source, lexicon, out_dir):
     words = read_lexicon(lexicon)
-    print("Mots jouables :", len(words), file=sys.stderr)
+    print("Playable words:", len(words), file=sys.stderr)
+    marks = ('"lang_code": "%s"' % lang, '"lang_code":"%s"' % lang)
     counter, lines = open_source(source)
     shards = {}
     kept = seen = 0
     started = last_report = time.time()
     for line in lines:
-        # Cheap prefilter before parsing: French entries only.
-        if '"lang_code": "fr"' not in line and '"lang_code":"fr"' not in line:
+        # Cheap prefilter before parsing: entries of the chosen language only.
+        if marks[0] not in line and marks[1] not in line:
             continue
         try:
             record = json.loads(line)
         except ValueError:
             continue
-        if record.get("lang_code") != "fr" or not isinstance(record.get("word"), str):
+        if record.get("lang_code") != lang or not isinstance(record.get("word"), str):
             continue
         seen += 1
         key = fold(record["word"])
@@ -184,10 +209,10 @@ def build(source, lexicon, out_dir):
         if now - last_report > 2:
             last_report = now
             pct = " %d %%" % (100 * counter.done / counter.total) if counter.total else ""
-            print("\r  %d entrées françaises lues, %d gardées%s   " % (seen, kept, pct), end="", file=sys.stderr)
+            print("\r  %d entries read, %d kept%s   " % (seen, kept, pct), end="", file=sys.stderr)
     print(file=sys.stderr)
     if kept == 0:
-        raise SystemExit("aucune définition trouvée : la source ne ressemble pas à un extrait du Wiktionnaire")
+        raise SystemExit("no definitions found: the source doesn't look like a wiktextract extract for '%s'" % lang)
 
     tmp = tempfile.mkdtemp(prefix=".definitions-", dir=os.path.dirname(out_dir))
     try:
@@ -195,8 +220,8 @@ def build(source, lexicon, out_dir):
             with open(os.path.join(tmp, prefix + ".json"), "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, separators=(",", ":"))
         manifest = {
-            "format": PACK_FORMAT, "version": PACK_VERSION,
-            "source": "Wiktionnaire (fr.wiktionary.org), extrait par Kaikki.org / wiktextract",
+            "format": PACK_FORMAT, "version": PACK_VERSION, "language": lang,
+            "source": LANGUAGES[lang]["name"],
             "sourceUrl": source if re.match(r"^https?://", source) else "",
             "license": "CC BY-SA 4.0", "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
             "builtAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
@@ -211,19 +236,23 @@ def build(source, lexicon, out_dir):
         shutil.rmtree(tmp, ignore_errors=True)
         raise
     size = sum(os.path.getsize(os.path.join(out_dir, f)) for f in os.listdir(out_dir))
-    print("Installé dans %s : %d mots, %d entrées, %.1f Mo, en %d s"
+    print("Installed in %s: %d words, %d entries, %.1f MB, in %d s"
           % (out_dir, manifest["words"], kept, size / 1e6, time.time() - started), file=sys.stderr)
 
 
 def main():
     data_home = os.environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share")
-    parser = argparse.ArgumentParser(description="Installe les définitions (Wiktionnaire) pour Omascrabble.")
-    parser.add_argument("--source", default=DEFAULT_SOURCE, help="URL ou fichier JSONL(.gz) wiktextract")
-    parser.add_argument("--lexicon", default=os.path.join(PLUGIN, "dictionary", "data", "open-fr.dawg"))
-    parser.add_argument("--out", default=os.path.join(data_home, "omascrabble", "definitions"))
+    parser = argparse.ArgumentParser(description="Installs word definitions (Wiktionary) for Omascrabble.")
+    parser.add_argument("--lang", choices=sorted(LANGUAGES), default="fr", help="game language (default: fr)")
+    parser.add_argument("--source", help="wiktextract JSONL(.gz) URL or file (default: the Kaikki.org extract)")
+    parser.add_argument("--lexicon", help="game word list (default: dictionary/data/open-<lang>.dawg)")
+    parser.add_argument("--out", help="pack directory (default: $XDG_DATA_HOME/omascrabble/definitions/<lang>)")
     args = parser.parse_args()
-    os.makedirs(os.path.dirname(args.out), exist_ok=True)
-    build(args.source, args.lexicon, args.out)
+    source = args.source or LANGUAGES[args.lang]["source"]
+    lexicon = args.lexicon or os.path.join(PLUGIN, "dictionary", "data", "open-%s.dawg" % args.lang)
+    out = args.out or os.path.join(data_home, "omascrabble", "definitions", args.lang)
+    os.makedirs(os.path.dirname(out), exist_ok=True)
+    build(args.lang, source, lexicon, out)
 
 
 if __name__ == "__main__":
