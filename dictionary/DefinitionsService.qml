@@ -62,7 +62,7 @@ Item {
     job = { language: lang, stage: "preparing", done: 0, total: 0, kept: 0, error: null }
     installer.lastError = null
     installer.cancelled = false
-    installer.command = ["sh", "-c", 'command -v python3 >/dev/null 2>&1 || exit 127; exec python3 "$@"', "install",
+    installer.command = ["sh", "-c", 'command -v python3 >/dev/null 2>&1 || exit 127; exec python3 -B "$@"', "install",
                          pluginDir + "/tools/download-definitions.py", "--lang", lang, "--progress-json"]
     installer.running = true
     return true

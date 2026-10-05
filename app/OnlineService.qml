@@ -119,7 +119,9 @@ Item {
   Process {
     id: helper
     property bool ready: false
-    command: ["sh", "-c", 'command -v python3 >/dev/null 2>&1 || exit 127; exec python3 "$@"', "online", service.pluginDir + "/net/online.py"]
+    // -B: no __pycache__ in the plugin folder (any change there makes
+    // Omarchy reload the plugin and close the game).
+    command: ["sh", "-c", 'command -v python3 >/dev/null 2>&1 || exit 127; exec python3 -B "$@"', "online", service.pluginDir + "/net/online.py"]
     stdinEnabled: true
     onStarted: {
       ready = true

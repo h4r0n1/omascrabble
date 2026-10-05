@@ -126,3 +126,27 @@ class HelperTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class NoBytecodeTest(unittest.TestCase):
+    """The helper runs from the plugin folder, which Omarchy watches: it must
+    never write __pycache__ there (that reloads the plugin and closes the
+    game)."""
+
+    def test_helper_leaves_its_folder_untouched(self):
+        root = tempfile.mkdtemp()
+        try:
+            net = os.path.join(root, "net")
+            shutil.copytree(os.path.dirname(HELPER), net, ignore=shutil.ignore_patterns("__pycache__"))
+            env = dict(os.environ, OMASCRABBLE_TRANSPORT="tcp")
+            env.pop("PYTHONDONTWRITEBYTECODE", None)
+            # Exactly how the game starts it would add -B; check the helper
+            # protects itself even without it.
+            p = subprocess.run([sys.executable, os.path.join(net, "online.py"), "--state-dir", os.path.join(root, "state")],
+                               input=b'{"cmd":"hello","name":"x"}\n{"cmd":"invite","config":{}}\n{"cmd":"quit"}\n',
+                               capture_output=True, env=env, timeout=60)
+            self.assertIn(b'"ev":"invite"', p.stdout)
+            written = [f for f in os.listdir(net) if f == "__pycache__" or f.endswith(".pyc")]
+            self.assertEqual(written, [])
+        finally:
+            shutil.rmtree(root)

@@ -15,14 +15,20 @@ Python standard library only. Sessions live in
 $XDG_STATE_HOME/omascrabble/online (readable by the user only).
 """
 
-import argparse
-import json
-import os
-import secrets
-import selectors
-import socket
 import sys
-import time
+
+# Never write __pycache__ next to these files: they live in the plugin's
+# folder, and Omarchy reloads a plugin (closing the game) whenever anything
+# in that folder changes.
+sys.dont_write_bytecode = True
+
+import argparse  # noqa: E402
+import json  # noqa: E402
+import os  # noqa: E402
+import secrets  # noqa: E402
+import selectors  # noqa: E402
+import socket  # noqa: E402
+import time  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
