@@ -25,7 +25,7 @@ export const SHORTCUT_ACTIONS = Object.freeze(Object.keys(DEFAULT_SHORTCUTS))
 
 export const DEFAULT_SETTINGS = Object.freeze({
   version: SETTINGS_VERSION,
-  language: "fr",            // fr | en | auto (system locale) — interface only
+  language: "en",            // en | fr | auto (system locale) — interface only
   appearance: "omarchy",      // omarchy | light | dark | system
   animation: "auto",          // auto | full | reduced | off
   gameplay: Object.freeze({
@@ -231,11 +231,11 @@ export function shortcutFromEvent(event, keys) {
 
 // `tr(key)` translates key names (key.Return…); defaults to French.
 export function shortcutLabel(shortcut, tr) {
-  const fr = { Return: "Entrée", Escape: "Échap", Space: "Espace", Backspace: "Retour", Delete: "Suppr", Shift: "Maj" }
+  const named = { Return: "Enter", Escape: "Esc", Space: "Space", Backspace: "Backspace", Delete: "Del", Shift: "Shift" }
   const fixed = { Ctrl: "Ctrl", Alt: "Alt", Slash: "/", Question: "?" }
   return String(shortcut || "").split("+").map(function(p) {
     if (fixed[p]) return fixed[p]
-    if (fr[p]) return tr ? tr("key." + p) : fr[p]
+    if (named[p]) return tr ? tr("key." + p) : named[p]
     return p
   }).join(" + ")
 }

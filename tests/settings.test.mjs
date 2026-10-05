@@ -53,7 +53,8 @@ export function register(t) {
     t.equal(shortcutFromEvent({ key: 0x53, modifiers: K.ControlModifier | K.ShiftModifier }, K), "Ctrl+Shift+S")
     t.equal(shortcutFromEvent({ key: K.Key_Escape, modifiers: 0 }, K), "Escape")
     t.equal(shortcutFromEvent({ key: 0x01001100, modifiers: 0 }, K), "")
-    t.equal(shortcutLabel("Ctrl+Return"), "Ctrl + Entrée")
+    t.equal(shortcutLabel("Ctrl+Return"), "Ctrl + Enter")
+    t.equal(shortcutLabel("Ctrl+Return", function(k) { return { "key.Return": "Entrée" }[k] }), "Ctrl + Entrée")
   })
 
   t.test("French number formatting", function() {

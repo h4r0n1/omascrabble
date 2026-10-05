@@ -16,7 +16,7 @@ QtObject {
   // Presentation context: palette, metrics and the interface language.
   // Every component already receives the theme, so translations ride along:
   // theme.t("key", { … }). Bindings re-evaluate when `language` changes.
-  property string language: "fr"
+  property string language: "en"
   function t(key, args) { return I18n.t(theme.language, key, args) }
 
   property string appearance: "omarchy"

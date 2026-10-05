@@ -41,7 +41,7 @@ export function register(tt) {
   })
 
   tt.test("fallbacks never show a blank", function() {
-    tt.equal(t("xx", "status.yourTurn"), "Votre tour", "unknown language falls back to French")
+    tt.equal(t("xx", "status.yourTurn"), "Your turn", "unknown language falls back to English")
     tt.equal(t("en", "no.such.key"), "no.such.key")
   })
 
@@ -50,7 +50,7 @@ export function register(tt) {
     tt.equal(resolveLanguage("auto", "fr_SN"), "fr")
     tt.equal(resolveLanguage("auto", "en_US"), "en")
     tt.equal(resolveLanguage("auto", "de_DE"), "en")
-    tt.equal(resolveLanguage("auto", "C"), "fr")
-    tt.equal(resolveLanguage("bogus", ""), "fr")
+    tt.equal(resolveLanguage("auto", "C"), "en")
+    tt.equal(resolveLanguage("bogus", ""), "en")
   })
 }

@@ -1,11 +1,11 @@
 // Interface translations. Catalogs map keys to strings with {placeholders},
 // or to functions when grammar needs logic (elision, plurals, persons).
 //
+//   t("en", "status.yourTurn")                     → "Your turn"
 //   t("fr", "status.yourTurn")                     → "Votre tour"
-//   t("en", "history.bag", { n: 12 })               → "12 tiles in the bag"
 //
-// Lookup order: the requested language, then French (the reference catalog),
-// then the key itself, so a missing string is visible rather than blank.
+// Lookup order: the requested language, then English (the default), then the
+// key itself, so a missing string is visible rather than blank.
 // The interface language is independent of the game language (tiles and
 // dictionary): an English interface can host a French game and vice versa.
 
@@ -14,7 +14,7 @@ import { EN } from "./en.mjs"
 
 export const CATALOGS = Object.freeze({ fr: FR, en: EN })
 export const INTERFACE_LANGUAGES = Object.freeze(["fr", "en"])
-export const DEFAULT_LANGUAGE = "fr"
+export const DEFAULT_LANGUAGE = "en"
 
 function interpolate(text, args) {
   if (!args) return text
@@ -32,7 +32,8 @@ export function t(lang, key, args) {
   return interpolate(entry, args)
 }
 
-// "auto" follows the system locale (LANG); anything not French is English.
+// "auto" follows the system locale (LANG): French for a French locale,
+// English otherwise.
 export function resolveLanguage(preference, locale) {
   if (INTERFACE_LANGUAGES.indexOf(preference) !== -1) return preference
   const l = String(locale || "").toLowerCase()

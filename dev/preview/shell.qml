@@ -83,8 +83,10 @@ ShellRoot {
       if (!app.saves.ready || app.dictionary.status !== "ready") return
       app.saves.saveSettings(Object.assign({}, app.saves.settings, { online: { name: scenario === "online-host" ? "Ana" : "Ben" } }))
       if (scenario === "online-host") {
+        var en = Quickshell.env("PREVIEW_GAMELANG") === "en"
+        if (en) app.dictionary.load("open-en")
         view.openOnline("invite")
-        app.online.invite({ mode: "online", gameLanguage: "fr", dictionary: "open-fr", timeMinutes: 0, validation: "immediate", challengePenalty: "none" })
+        app.online.invite({ mode: "online", gameLanguage: en ? "en" : "fr", dictionary: en ? "open-en" : "open-fr", timeMinutes: 0, validation: "immediate", challengePenalty: "none" })
         onlineStage = "invited"
       } else {
         view.openOnline("join")
@@ -379,7 +381,10 @@ ShellRoot {
                                                       config: { gameLanguage: "en", dictionary: "open-en", timeMinutes: 25, validation: "challenge" } })
         if (sc === "exchange") view.openExchange()
         if (sc === "practice") c.requestHint()
-        if (sc === "words" || sc === "words-missing") view.openWords(["SIEGE", "CHAISE", "MOT"], "Vous  ·  H8  ·  24 pts")
+        if (sc === "words" || sc === "words-missing") {
+          if (gameDict === "open-en") view.openWords(["QUIZ", "HOUSE", "WORD"], "You  ·  8H  ·  24 pts")
+          else view.openWords(["SIEGE", "CHAISE", "MOT"], "Vous  ·  H8  ·  24 pts")
+        }
         if (sc === "words-missing" && Quickshell.env("PREVIEW_DEFS_INSTALL") !== "") app.definitions.install(Quickshell.env("PREVIEW_DEFS_INSTALL"))
         return
       }

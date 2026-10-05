@@ -190,7 +190,7 @@ Item {
           Text {
             width: parent.width
             wrapMode: Text.WordWrap
-            text: I18n.t(I18n.resolveLanguage(appLoader.item ? appLoader.item.saves.settings.language : "fr", Qt.locale().name), "boot.failed.title")
+            text: I18n.t(I18n.resolveLanguage(appLoader.item ? appLoader.item.saves.settings.language : "en", Qt.locale().name), "boot.failed.title")
             color: Color.foreground
             font.family: Style.font.family
             font.pixelSize: Style.font.display
@@ -199,7 +199,7 @@ Item {
           Text {
             width: parent.width
             wrapMode: Text.WordWrap
-            text: I18n.t(I18n.resolveLanguage(appLoader.item ? appLoader.item.saves.settings.language : "fr", Qt.locale().name), "boot.failed.text")
+            text: I18n.t(I18n.resolveLanguage(appLoader.item ? appLoader.item.saves.settings.language : "en", Qt.locale().name), "boot.failed.text")
             color: Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.7)
             font.family: Style.font.family
             font.pixelSize: Style.font.body
@@ -220,7 +220,7 @@ Item {
             Text {
               id: retryLabel
               anchors.centerIn: parent
-              text: I18n.t(I18n.resolveLanguage(appLoader.item ? appLoader.item.saves.settings.language : "fr", Qt.locale().name), "common.retry")
+              text: I18n.t(I18n.resolveLanguage(appLoader.item ? appLoader.item.saves.settings.language : "en", Qt.locale().name), "common.retry")
               color: Color.background
               font.family: Style.font.family
               font.pixelSize: Style.font.body

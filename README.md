@@ -5,7 +5,7 @@ A classic Scrabble game, in French or English, for **Omarchy Quattro**, built as
 browser, no Electron, no server, fully offline.
 
 <p align="center">
-  <img src="preview.png" alt="A French game in practice mode: the board, the rack, a suggested move, the score panel and the move history" width="900">
+  <img src="preview.png" alt="An English game in practice mode: the board, the rack, a suggested move, the score panel and the move history" width="900">
 </p>
 
 ```bash
@@ -28,8 +28,8 @@ omarchy-shell shell toggle omascrabble
   Champion — that sees only what a player may see, with rack values tuned for
   each language.
 - Keyboard-first, mouse and drag-and-drop too; follows the Omarchy theme.
-- French or English interface (or follow the system language), independent
-  of the game language.
+- English or French interface (English by default, or follow the system
+  language), independent of the game language.
 
 > Independent community project. SCRABBLE® is a trademark of its respective
 > owners; this game is neither affiliated with nor endorsed by them, and uses
@@ -40,14 +40,14 @@ omarchy-shell shell toggle omascrabble
 <table>
   <tr>
     <td width="50%"><img src="docs/screenshots/home.png" alt="Home screen with the OMA SCRABBLE tile logo"><br><sub>Home screen</sub></td>
-    <td width="50%"><img src="docs/screenshots/english.png" alt="An English game in practice mode, with a suggested move"><br><sub>An English game (practice mode)</sub></td>
+    <td width="50%"><img src="docs/screenshots/end.png" alt="End of a game against the computer: scores, statistics and every word played"><br><sub>End of a game against the computer</sub></td>
   </tr>
   <tr>
     <td width="50%"><img src="docs/screenshots/online-game.png" alt="An online game against a friend, waiting for their move"><br><sub>Online, against a friend on another computer</sub></td>
     <td width="50%"><img src="docs/screenshots/online-invite.png" alt="Inviting a friend from the friends list or with a link"><br><sub>Invite a friend: from your friends list, or with a link</sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="docs/screenshots/definitions.png" alt="Definitions dialog showing Wiktionnaire entries for the words of a move"><br><sub>Word definitions (optional pack)</sub></td>
+    <td width="50%"><img src="docs/screenshots/definitions.png" alt="Definitions dialog showing Wiktionary entries for the words of a move"><br><sub>Word definitions (optional pack)</sub></td>
     <td width="50%"><img src="docs/screenshots/settings.png" alt="Settings, Online section: name, invitations, friends"><br><sub>Settings</sub></td>
   </tr>
 </table>
