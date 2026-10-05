@@ -237,7 +237,7 @@ ShellRoot {
         if (sc === "hvh") { c.applyGameAction({ type: "pass", player: 0 }); console.log("HVH handover=" + c.handoverPending); return }
         rootShell.selfPlay(sc === "end" ? 80 : 12)
         if (sc === "pending" || sc === "midgame" || sc === "narrow") rootShell.placePending(3)
-        if (sc === "settings") view.overlay = "settings"
+        if (sc === "settings") view.openSettings(Quickshell.env("PREVIEW_SECTION"))
         if (sc === "defs") {
           view.overlay = "settings"
           if (Quickshell.env("PREVIEW_DEFS_INSTALL") !== "") app.definitions.install(Quickshell.env("PREVIEW_DEFS_INSTALL"))

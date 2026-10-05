@@ -59,6 +59,11 @@ FocusScope {
     onPressed: function(mouse) { view.keyboardMode = false; mouse.accepted = false }
   }
 
+  function openSettings(section) {
+    settingsScreen.section = section || ""
+    overlay = "settings"
+  }
+
   function showGame() {
     screen = "game"
     overlay = ""
@@ -1017,7 +1022,7 @@ FocusScope {
       else if (id === "resign") confirmDialog.ask("resign", tr("confirm.resign.title"), tr("confirm.resign.message"), tr("confirm.resign.button"), true)
       else if (id === "replay") view.replaying = true
       else if (id === "shortcuts") shortcutsDialog.open = true
-      else if (id === "about") { view.overlay = "settings"; settingsScreen.section = "about" }
+      else if (id === "about") view.openSettings("about")
     }
   }
 

@@ -9,6 +9,7 @@
 #        PREVIEW_DEFS_INSTALL=fr|en (scenario defs: start a download; set
 #        OMASCRABBLE_DEFINITIONS_SOURCE to a small local extract)
 #        PREVIEW_DEFS_REMOVE=fr|en (scenario defs: remove that pack)
+#        PREVIEW_SECTION=<id> (scenario settings: page to open)
 #        PREVIEW_STEPS=<n> (snapshot after n × 100 ms, default 14)
 #
 # It runs a separate, short-lived Quickshell process on the offscreen platform:
@@ -42,7 +43,7 @@ if [[ $scenario == corrupt ]]; then
 fi
 
 PREVIEW_SCENARIO="$scenario" PREVIEW_OUTPUT="$output" PREVIEW_WIDTH="$width" PREVIEW_HEIGHT="$height" \
-PREVIEW_PLUGIN="$repo" PREVIEW_HC="${PREVIEW_HC:-}" PREVIEW_LANG="${PREVIEW_LANG:-}" PREVIEW_GAMELANG="${PREVIEW_GAMELANG:-}" PREVIEW_DEFS_INSTALL="${PREVIEW_DEFS_INSTALL:-}" PREVIEW_DEFS_REMOVE="${PREVIEW_DEFS_REMOVE:-}" PREVIEW_STEPS="${PREVIEW_STEPS:-}" XDG_STATE_HOME="$work/state" XDG_DATA_HOME="$work/data" \
+PREVIEW_PLUGIN="$repo" PREVIEW_HC="${PREVIEW_HC:-}" PREVIEW_LANG="${PREVIEW_LANG:-}" PREVIEW_GAMELANG="${PREVIEW_GAMELANG:-}" PREVIEW_DEFS_INSTALL="${PREVIEW_DEFS_INSTALL:-}" PREVIEW_DEFS_REMOVE="${PREVIEW_DEFS_REMOVE:-}" PREVIEW_STEPS="${PREVIEW_STEPS:-}" PREVIEW_SECTION="${PREVIEW_SECTION:-}" XDG_STATE_HOME="$work/state" XDG_DATA_HOME="$work/data" \
 QT_QPA_PLATFORM=offscreen timeout 60 quickshell -p "$work/config" 2>&1 \
   | grep -v -e "WAYLAND_DISPLAY" -e "QT_QPA_PLATFORM" -e "actually running" -e "--- WARNING" -e "window masks" || true
 
