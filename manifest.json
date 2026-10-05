@@ -5,7 +5,7 @@
   "version": "0.3.0",
   "author": "Omascrabble contributors",
   "license": "MIT",
-  "description": "Classic Scrabble in French or English as a native Omarchy window: algorithmic AI at four levels, two-player and practice modes, open word lists, optional Wiktionary definitions, fully offline. Not affiliated with the SCRABBLE trademark owners. Toggle: omarchy-shell shell toggle omascrabble",
+  "description": "Classic Scrabble in English or French as a native Omarchy window: algorithmic AI at four levels, practice mode, optional online play with friends (Tox, no server, fair encrypted bag), open word lists, optional Wiktionary definitions. Not affiliated with the SCRABBLE trademark owners. Toggle: omarchy-shell shell toggle omascrabble",
   "kinds": [
     "panel"
   ],
