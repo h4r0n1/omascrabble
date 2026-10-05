@@ -2,7 +2,7 @@
 // Node test runner: `node tests/run.mjs [filter]`.
 // Loads the bundled dictionary as a fixture when it exists.
 
-import { readFileSync, existsSync } from "node:fs"
+import { readFileSync, existsSync, readdirSync, statSync } from "node:fs"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { createRunner } from "./lib/harness.mjs"
@@ -14,7 +14,19 @@ const read = function(rel) {
   return existsSync(p) ? readFileSync(p, "utf8") : null
 }
 
+// Every QML file the plugin ships (static checks).
+function qmlSources(dir, out) {
+  for (const name of readdirSync(join(root, dir))) {
+    const rel = dir ? dir + "/" + name : name
+    if (name.startsWith(".") || rel === "dev" || rel === "tests" || rel === "tools") continue
+    if (statSync(join(root, rel)).isDirectory()) qmlSources(rel, out)
+    else if (name.endsWith(".qml")) out[rel] = readFileSync(join(root, rel), "utf8")
+  }
+  return out
+}
+
 const context = {
+  qmlSources: qmlSources("", {}),
   openLexicon: read("dictionary/data/open-fr.dawg"),
   openLexiconForms: read("dictionary/data/open-fr.forms.dawg"),
   openEnglish: read("dictionary/data/open-en.dawg"),

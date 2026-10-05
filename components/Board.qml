@@ -85,6 +85,7 @@ Item {
     Repeater {
       model: 15
       Text {
+        textFormat: Text.PlainText
         width: board.cellSize
         height: board.labelSize
         horizontalAlignment: Text.AlignHCenter
@@ -106,6 +107,7 @@ Item {
     Repeater {
       model: 15
       Text {
+        textFormat: Text.PlainText
         width: board.labelSize
         height: board.cellSize
         horizontalAlignment: Text.AlignHCenter

@@ -72,6 +72,7 @@ Item {
   }
 
   Text {
+    textFormat: Text.PlainText
     id: score
     anchors.left: left.right
     anchors.leftMargin: controls.theme.spaceLarge

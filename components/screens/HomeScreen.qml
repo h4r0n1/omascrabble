@@ -119,6 +119,7 @@ FocusScope {
           width: parent.width - 2 * home.theme.padding
           spacing: home.theme.space
           Text {
+            textFormat: Text.PlainText
             text: home.tr("home.inProgress")
             color: home.theme.muted
             font.family: home.theme.fontFamily
@@ -127,6 +128,7 @@ FocusScope {
             font.letterSpacing: 1.2
           }
           Text {
+            textFormat: Text.PlainText
             text: home.modeLabel(home.saved)
             color: home.theme.foreground
             font.family: home.theme.fontFamily
@@ -134,6 +136,7 @@ FocusScope {
             font.weight: Font.Bold
           }
           Text {
+            textFormat: Text.PlainText
             text: home.scoreLine(home.saved) + (home.saved ? "   ·   " + home.tr("home.turn", { n: home.saved.turn }) + "   ·   " + home.tr("common.tilesInBag", { n: home.saved.bag.length }) : "")
             color: home.theme.muted
             font.family: home.theme.fontFamily
@@ -174,6 +177,7 @@ FocusScope {
         width: parent.width
         spacing: 4
         Text {
+          textFormat: Text.PlainText
           anchors.horizontalCenter: parent.horizontalCenter
           text: home.dictionary && home.dictionary.provider
             ? home.tr("dict." + home.dictionary.provider.id() + ".label") + "  ·  " + home.tr("home.words", { n: Format.formatInt(home.dictionary.provider.graph().wordCount, home.theme.language) })
@@ -183,6 +187,7 @@ FocusScope {
           font.pixelSize: home.theme.fontSmall
         }
         Text {
+          textFormat: Text.PlainText
           width: parent.width
           horizontalAlignment: Text.AlignHCenter
           wrapMode: Text.WordWrap

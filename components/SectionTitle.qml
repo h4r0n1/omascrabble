@@ -8,6 +8,7 @@ Item {
   implicitHeight: label.implicitHeight + 10
   implicitWidth: 300
   Text {
+    textFormat: Text.PlainText
     id: label
     anchors.left: parent.left
     anchors.bottom: rule.top

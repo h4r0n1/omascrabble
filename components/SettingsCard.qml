@@ -11,6 +11,7 @@ Column {
   spacing: theme.space
 
   Text {
+    textFormat: Text.PlainText
     visible: card.title !== ""
     text: card.title
     color: card.theme.muted

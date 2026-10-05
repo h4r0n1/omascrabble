@@ -32,6 +32,7 @@ Item {
     spacing: preview.compact ? 2 : 4
 
     Text {
+      textFormat: Text.PlainText
       visible: !preview.result
       width: parent.width
       text: preview.emptyText
@@ -42,6 +43,7 @@ Item {
     }
 
     Text {
+      textFormat: Text.PlainText
       visible: preview.structural
       width: parent.width
       text: preview.result && preview.result.reason ? preview.theme.t("reason." + preview.result.reason, { words: preview.result.invalidWords || [] }) : ""
@@ -59,6 +61,7 @@ Item {
         height: wordText.implicitHeight
         readonly property bool bad: preview.showValidity && modelData.valid === false
         Text {
+          textFormat: Text.PlainText
           id: wordText
           text: modelData.notation || modelData.word
           color: parent.bad ? preview.theme.urgent : preview.theme.foreground
@@ -76,6 +79,7 @@ Item {
           onClicked: preview.wordActivated(modelData.word)
         }
         Text {
+          textFormat: Text.PlainText
           visible: parent.bad
           anchors.left: wordText.right
           anchors.leftMargin: 6
@@ -86,6 +90,7 @@ Item {
           font.pixelSize: preview.theme.fontCaption
         }
         Text {
+          textFormat: Text.PlainText
           anchors.right: parent.right
           text: modelData.score
           color: preview.theme.foreground
@@ -101,6 +106,7 @@ Item {
       width: content.width
       height: bonusText.implicitHeight
       Text {
+        textFormat: Text.PlainText
         id: bonusText
         text: preview.theme.t("preview.bingo")
         color: preview.theme.accent
@@ -109,6 +115,7 @@ Item {
         font.weight: Font.DemiBold
       }
       Text {
+        textFormat: Text.PlainText
         anchors.right: parent.right
         text: "+ " + (preview.result ? preview.result.bonus : 0)
         color: preview.theme.accent
@@ -130,6 +137,7 @@ Item {
       width: content.width
       height: totalText.implicitHeight
       Text {
+        textFormat: Text.PlainText
         id: totalText
         text: preview.theme.t("preview.total")
         color: preview.theme.muted
@@ -140,6 +148,7 @@ Item {
         anchors.verticalCenter: totalValue.verticalCenter
       }
       Text {
+        textFormat: Text.PlainText
         id: totalValue
         anchors.right: parent.right
         text: preview.result ? preview.theme.t("common.pts", { n: preview.result.score }) : ""
@@ -151,6 +160,7 @@ Item {
     }
 
     Text {
+      textFormat: Text.PlainText
       visible: !!(preview.result && !preview.result.valid && !preview.structural && preview.result.reason !== "INVALID_WORD" && preview.result.reason !== "INVALID_CROSS_WORD")
       width: parent.width
       text: preview.result && preview.result.reason ? preview.theme.t("reason." + preview.result.reason, { words: preview.result.invalidWords || [] }) : ""

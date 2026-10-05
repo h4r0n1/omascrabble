@@ -40,6 +40,7 @@ FocusScope {
     spacing: group.theme.space
 
     Text {
+      textFormat: Text.PlainText
       visible: group.title !== ""
       text: group.title.toUpperCase()
       color: group.activeFocus ? group.theme.accent : group.theme.muted
@@ -95,6 +96,7 @@ FocusScope {
               Row {
                 spacing: 8
                 Text {
+                  textFormat: Text.PlainText
                   text: option.modelData.label
                   color: option.selected ? group.theme.foreground : group.theme.foreground
                   font.family: group.theme.fontFamily
@@ -109,6 +111,7 @@ FocusScope {
                   color: group.theme.alpha(group.theme.accent, 0.16)
                   anchors.verticalCenter: parent.verticalCenter
                   Text {
+                    textFormat: Text.PlainText
                     id: badgeText
                     anchors.centerIn: parent
                     text: option.modelData.badge || ""
@@ -120,6 +123,7 @@ FocusScope {
                 }
               }
               Text {
+                textFormat: Text.PlainText
                 visible: !group.inline && !!option.modelData.detail
                 text: option.modelData.detail || ""
                 color: group.theme.muted

@@ -76,6 +76,7 @@ Item {
       }
 
       Text {
+        textFormat: Text.PlainText
         id: glyph
         text: tile.letter
         anchors.horizontalCenter: parent.horizontalCenter
@@ -90,6 +91,7 @@ Item {
       }
 
       Text {
+        textFormat: Text.PlainText
         visible: tile.showPoints && !tile.joker && tile.size >= 20
         text: tile.points
         anchors.right: parent.right

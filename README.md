@@ -247,7 +247,8 @@ only) and a network connection, once; French is about 740 MB, English about
 language's word list are kept (up to three short definitions each, with a
 link from an inflected form to its base word), written as small JSON shards
 to `~/.local/share/omascrabble/definitions/<lang>`. The game then reads them
-offline.
+offline, and shows them strictly as plain text: nothing inside a definition
+is ever interpreted as markup or loaded from the network.
 
 The same thing from a terminal:
 

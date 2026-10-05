@@ -112,6 +112,7 @@ FocusScope {
           Column {
             anchors.verticalCenter: parent.verticalCenter
             Text {
+              textFormat: Text.PlainText
               text: end.title()
               color: end.theme.foreground
               font.family: end.theme.fontFamily
@@ -119,6 +120,7 @@ FocusScope {
               font.weight: Font.Bold
             }
             Text {
+              textFormat: Text.PlainText
               text: end.reason()
               color: end.theme.muted
               font.family: end.theme.fontFamily
@@ -144,6 +146,7 @@ FocusScope {
               border.width: end.theme.borderWidth
               border.color: end.info && end.info.winner === index ? end.theme.alpha(end.theme.accent, 0.5) : end.theme.line
               Text {
+                textFormat: Text.PlainText
                 x: end.theme.padding
                 anchors.verticalCenter: parent.verticalCenter
                 text: end.name(index)
@@ -153,6 +156,7 @@ FocusScope {
                 font.weight: Font.Bold
               }
               Text {
+                textFormat: Text.PlainText
                 anchors.right: final.left
                 anchors.rightMargin: end.theme.spaceHuge
                 anchors.verticalCenter: parent.verticalCenter
@@ -163,6 +167,7 @@ FocusScope {
                 font.pixelSize: end.theme.fontSmall
               }
               Text {
+                textFormat: Text.PlainText
                 id: final
                 anchors.right: parent.right
                 anchors.rightMargin: end.theme.padding
@@ -202,6 +207,7 @@ FocusScope {
                 anchors.verticalCenter: parent.verticalCenter
                 width: parent.width - 2 * end.theme.space
                 Text {
+                  textFormat: Text.PlainText
                   text: modelData[0].toUpperCase()
                   color: end.theme.muted
                   font.family: end.theme.fontFamily
@@ -210,6 +216,7 @@ FocusScope {
                   font.letterSpacing: 1
                 }
                 Text {
+                  textFormat: Text.PlainText
                   text: String(modelData[1])
                   width: parent.width
                   elide: Text.ElideRight
@@ -234,6 +241,7 @@ FocusScope {
               width: (content.width - (end.g.players.length - 1) * end.theme.spaceLarge) / end.g.players.length
               spacing: 2
               Text {
+                textFormat: Text.PlainText
                 text: end.wordsTitle(index)
                 color: end.theme.muted
                 font.family: end.theme.fontFamily
@@ -248,6 +256,7 @@ FocusScope {
                   width: parent.width
                   height: end.theme.fontBody * 1.7
                   Text {
+                    textFormat: Text.PlainText
                     text: modelData.text
                     color: modelData.bingo ? end.theme.accent : end.theme.foreground
                     font.family: end.theme.fontFamily
@@ -261,6 +270,7 @@ FocusScope {
                     onClicked: end.wordRequested(modelData.index)
                   }
                   Text {
+                    textFormat: Text.PlainText
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
                     text: modelData.score

@@ -36,6 +36,7 @@ Dialog {
         width: parent.width
         height: dlg.theme.fontBody * 1.9
         Text {
+          textFormat: Text.PlainText
           text: dlg.theme.t("shortcut." + modelData)
           color: dlg.theme.foreground
           font.family: dlg.theme.fontFamily
@@ -58,6 +59,7 @@ Dialog {
         width: parent.width
         height: dlg.theme.fontBody * 1.9
         Text {
+          textFormat: Text.PlainText
           text: dlg.theme.t(modelData[1])
           color: dlg.theme.muted
           font.family: dlg.theme.fontFamily

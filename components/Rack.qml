@@ -62,6 +62,7 @@ Item {
     }
 
     Text {
+      textFormat: Text.PlainText
       visible: rack.hidden
       anchors.centerIn: parent
       text: rack.theme.t("rack.hidden")

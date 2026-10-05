@@ -36,6 +36,7 @@ FocusScope {
     anchors.verticalCenter: parent.verticalCenter
     spacing: 1
     Text {
+      textFormat: Text.PlainText
       width: parent.width
       text: row.label
       color: row.theme.foreground
@@ -44,6 +45,7 @@ FocusScope {
       wrapMode: Text.WordWrap
     }
     Text {
+      textFormat: Text.PlainText
       visible: row.detail !== ""
       width: parent.width
       text: row.detail

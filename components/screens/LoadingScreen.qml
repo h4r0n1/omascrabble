@@ -40,6 +40,7 @@ Rectangle {
       }
     }
     Text {
+      textFormat: Text.PlainText
       anchors.horizontalCenter: parent.horizontalCenter
       text: loading.dictionary && loading.dictionary.status === "loading"
         ? loading.theme.t("loading.dictionary", { n: Math.round(loading.dictionary.progress * 100) })

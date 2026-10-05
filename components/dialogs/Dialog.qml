@@ -63,6 +63,7 @@ FocusScope {
       spacing: dialog.theme.spaceLarge
 
       Text {
+        textFormat: Text.PlainText
         visible: dialog.title !== ""
         width: parent.width
         text: dialog.title
@@ -73,6 +74,7 @@ FocusScope {
         wrapMode: Text.WordWrap
       }
       Text {
+        textFormat: Text.PlainText
         visible: dialog.message !== ""
         width: parent.width
         text: dialog.message

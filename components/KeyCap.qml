@@ -14,6 +14,7 @@ Rectangle {
   border.width: 1
   border.color: theme.line
   Text {
+    textFormat: Text.PlainText
     id: label
     anchors.centerIn: parent
     text: cap.text

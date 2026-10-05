@@ -22,6 +22,7 @@ Rectangle {
     width: parent.width - 2 * x
     spacing: 2
     Text {
+      textFormat: Text.PlainText
       text: tile.label.toUpperCase()
       width: parent.width
       elide: Text.ElideRight
@@ -32,6 +33,7 @@ Rectangle {
       font.letterSpacing: 1
     }
     Text {
+      textFormat: Text.PlainText
       text: tile.value
       width: parent.width
       elide: Text.ElideRight
@@ -41,6 +43,7 @@ Rectangle {
       font.weight: Font.Bold
     }
     Text {
+      textFormat: Text.PlainText
       visible: !tile.compact
       text: tile.detail !== "" ? tile.detail : " "
       width: parent.width

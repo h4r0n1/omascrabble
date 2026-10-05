@@ -40,6 +40,7 @@ Item {
       anchors.verticalCenter: parent.verticalCenter
       spacing: 1
       Text {
+        textFormat: Text.PlainText
         text: header.title
         color: header.theme.foreground
         font.family: header.theme.fontFamily
@@ -48,6 +49,7 @@ Item {
         font.letterSpacing: 0.4
       }
       Text {
+        textFormat: Text.PlainText
         visible: header.subtitle !== ""
         text: header.subtitle
         color: header.theme.muted

@@ -118,6 +118,7 @@ FocusScope {
         anchors.verticalCenter: parent.verticalCenter
       }
       Text {
+        textFormat: Text.PlainText
         text: item.label
         color: item.selected ? item.theme.foreground : item.theme.muted
         font.family: item.theme.fontFamily
@@ -152,6 +153,7 @@ FocusScope {
       spacing: page.theme.space
       GameButton { theme: page.theme; icon: "back"; variant: "ghost"; focusable: false; tooltip: page.tr("common.back"); onClicked: page.closed(); anchors.verticalCenter: parent.verticalCenter }
       Text {
+        textFormat: Text.PlainText
         text: page.tr("settings.title")
         color: page.theme.foreground
         font.family: page.theme.fontFamily
@@ -271,6 +273,7 @@ FocusScope {
           width: parent.width
           spacing: 4
           Text {
+            textFormat: Text.PlainText
             text: page.tr("settings.nav." + page.current)
             color: page.theme.foreground
             font.family: page.theme.fontFamily
@@ -278,6 +281,7 @@ FocusScope {
             font.weight: Font.Bold
           }
           Text {
+            textFormat: Text.PlainText
             width: parent.width
             wrapMode: Text.WordWrap
             text: page.tr("settings.nav." + page.current + ".detail")
@@ -383,6 +387,7 @@ FocusScope {
               onPicked: function(v) { page.set("animation", v) }
             }
             Text {
+              textFormat: Text.PlainText
               width: parent.width
               wrapMode: Text.WordWrap
               text: page.tr("settings.animation.note")
@@ -450,6 +455,7 @@ FocusScope {
                   color: page.theme.line
                 }
                 Text {
+                  textFormat: Text.PlainText
                   anchors.verticalCenter: parent.verticalCenter
                   x: 8
                   text: page.tr("shortcut." + modelData)
@@ -475,6 +481,7 @@ FocusScope {
           }
           GameButton { theme: page.theme; variant: "secondary"; text: page.tr("settings.resetShortcuts"); onClicked: page.set("shortcuts", SettingsModel.DEFAULT_SHORTCUTS) }
           Text {
+            textFormat: Text.PlainText
             width: parent.width
             wrapMode: Text.WordWrap
             text: page.tr("settings.shortcutsNote")
@@ -490,6 +497,7 @@ FocusScope {
           width: parent.width
           spacing: page.theme.spaceLarge
           Text {
+            textFormat: Text.PlainText
             width: parent.width
             wrapMode: Text.WordWrap
             lineHeight: 1.2
@@ -549,6 +557,7 @@ FocusScope {
             }
           }
           Text {
+            textFormat: Text.PlainText
             width: parent.width
             wrapMode: Text.WordWrap
             lineHeight: 1.2

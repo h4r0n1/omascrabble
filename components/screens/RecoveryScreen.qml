@@ -24,6 +24,7 @@ Rectangle {
       height: 36
     }
     Text {
+      textFormat: Text.PlainText
       width: parent.width
       wrapMode: Text.WordWrap
       text: recovery.theme.t(recovery.dictionary && recovery.dictionary.status === "missing" ? "recovery.missing" : "recovery.failed")
@@ -33,6 +34,7 @@ Rectangle {
       font.weight: Font.Bold
     }
     Text {
+      textFormat: Text.PlainText
       width: parent.width
       wrapMode: Text.WordWrap
       lineHeight: 1.2
@@ -49,6 +51,7 @@ Rectangle {
       border.width: 1
       border.color: recovery.theme.line
       Text {
+        textFormat: Text.PlainText
         id: detail
         x: recovery.theme.space
         y: recovery.theme.space

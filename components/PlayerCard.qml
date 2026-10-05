@@ -76,6 +76,7 @@ Rectangle {
       anchors.right: card.alignRight ? parent.right : undefined
       spacing: card.theme.space
       Text {
+        textFormat: Text.PlainText
         text: card.name.toUpperCase()
         color: card.active ? card.theme.foreground : card.theme.muted
         font.family: card.theme.fontFamily
@@ -86,6 +87,7 @@ Rectangle {
         width: Math.min(implicitWidth, card.width * 0.55)
       }
       Text {
+        textFormat: Text.PlainText
         visible: card.subtitle !== ""
         text: card.subtitle
         color: card.theme.muted
@@ -100,6 +102,7 @@ Rectangle {
       width: parent.width
       height: scoreText.implicitHeight
       Text {
+        textFormat: Text.PlainText
         id: scoreText
         anchors.left: card.alignRight ? undefined : parent.left
         anchors.right: card.alignRight ? parent.right : undefined
@@ -110,6 +113,7 @@ Rectangle {
         font.weight: Font.Bold
       }
       Text {
+        textFormat: Text.PlainText
         visible: card.showClock
         anchors.right: card.alignRight ? undefined : parent.right
         anchors.left: card.alignRight ? parent.left : undefined
@@ -137,6 +141,7 @@ Rectangle {
         anchors.verticalCenter: parent.verticalCenter
       }
       Text {
+        textFormat: Text.PlainText
         id: statusText
         text: card.status
         color: card.active ? card.theme.foreground : card.theme.muted
@@ -157,6 +162,7 @@ Rectangle {
 
   // Rises beside the score, inside the card.
   Text {
+    textFormat: Text.PlainText
     id: flyout
     x: column.x + (card.alignRight ? column.width - scoreText.implicitWidth - width - 12 : scoreText.implicitWidth + 12)
     y: card.flyoutBase

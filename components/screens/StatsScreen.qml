@@ -53,6 +53,7 @@ FocusScope {
           anchors.verticalCenter: parent.verticalCenter
           GameButton { theme: stats.theme; icon: "back"; variant: "ghost"; focusable: false; tooltip: stats.tr("common.back"); onClicked: stats.closed(); anchors.verticalCenter: parent.verticalCenter }
           Text {
+            textFormat: Text.PlainText
             text: stats.tr("stats.title")
             color: stats.theme.foreground
             font.family: stats.theme.fontFamily
@@ -75,6 +76,7 @@ FocusScope {
       }
 
       Text {
+        textFormat: Text.PlainText
         visible: stats.s.gamesPlayed === 0
         text: stats.tr("stats.empty")
         color: stats.theme.muted
@@ -149,6 +151,7 @@ FocusScope {
             radius: stats.theme.radius
             color: stats.theme.panel
             Text {
+              textFormat: Text.PlainText
               x: stats.theme.padding
               anchors.verticalCenter: parent.verticalCenter
               text: stats.tr("stats.result." + modelData.result)
@@ -159,6 +162,7 @@ FocusScope {
               font.weight: Font.DemiBold
             }
             Text {
+              textFormat: Text.PlainText
               anchors.right: parent.right
               anchors.rightMargin: stats.theme.padding
               anchors.verticalCenter: parent.verticalCenter
