@@ -109,6 +109,11 @@ ShellRoot {
       if (c.isOnline && c.isActive && !c.rackRevealing) { onlineLog("started seat=" + c.viewer + " first=" + c.game.current); onlineStage = "play" }
       return
     }
+    // Take the picture once the drawn tiles are revealed.
+    if (onlineStage === "stopping") {
+      if (!c.rackRevealing && c.onlineWork === "") { onlineStage = "done"; Qt.callLater(shot) }
+      return
+    }
     if (onlineStage === "play") {
       if (c.onlineProblem) { onlineLog("PROBLEM " + JSON.stringify(c.onlineProblem)); shot(); onlineStage = "done"; return }
       if (c.isOver && !c.game.end.awaitingReveal) {
@@ -128,7 +133,7 @@ ShellRoot {
       if (!res.ok) c.applyGameAction({ type: "pass", player: me })
       onlineMoves++
       onlineLog("move " + onlineMoves + " " + action.type + " fp=" + Engine.fingerprint(c.game))
-      if (onlineMoves === Number(Quickshell.env("PREVIEW_ONLINE_STOP") || -1)) { onlineStage = "done"; Qt.callLater(shot) }
+      if (onlineMoves === Number(Quickshell.env("PREVIEW_ONLINE_STOP") || -1)) onlineStage = "stopping"
     }
   }
   function onlineScreen() {
@@ -319,6 +324,9 @@ ShellRoot {
           return
         }
         if (sc === "online-join") { view.openOnline("join"); return }
+        // Screenshots never show the machine's user name.
+        if (sc.indexOf("online-") === 0)
+          app.saves.saveSettings(Object.assign({}, app.saves.settings, { online: Object.assign({}, app.saves.settings.online, { name: "Ana" }) }))
         var fakeFriends = [{ id: "A".repeat(64), name: "Sultan", online: true, last: 2 }, { id: "B".repeat(64), name: "Awa", online: false, last: 1 }]
         if (sc === "online-friends") {
           view.openOnline("invite")
