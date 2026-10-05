@@ -1,5 +1,5 @@
 import { normalizeSettings, withSetting, matchesShortcut, shortcutFromEvent, isValidShortcut, shortcutLabel, DEFAULT_SETTINGS } from "../app/settings.mjs"
-import { formatInt, formatDecimal } from "../app/format.mjs"
+import { formatInt, formatDecimal, cleanName, escapeMarkup } from "../app/format.mjs"
 
 export const name = "Settings"
 
@@ -68,5 +68,13 @@ export function register(t) {
     t.equal(formatInt(-1234567, "en"), "−1,234,567")
     t.equal(formatInt(999, "en"), "999")
     t.equal(formatDecimal(1234.25, 1, "en"), "1,234.3")
+  })
+
+  t.test("names from the other machine are cleaned", function() {
+    t.equal(cleanName("  Ben\u0007 "), "Ben")
+    t.equal(cleanName("Ana\u202Egnp.exe"), "Anagnp.exe", "no bidirectional override")
+    t.equal(cleanName("x".repeat(60)).length, 40)
+    t.equal(cleanName(null), "")
+    t.equal(escapeMarkup("<b>Ben</b> & co"), "&lt;b&gt;Ben&lt;/b&gt; &amp; co")
   })
 }

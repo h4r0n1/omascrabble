@@ -1233,6 +1233,7 @@ FocusScope {
     border.width: appTheme.borderWidth
     border.color: appTheme.alpha(appTheme.urgent, 0.7)
     Text {
+      textFormat: Text.PlainText
       id: problemText
       anchors.centerIn: parent
       width: Math.min(implicitWidth, view.width - 4 * appTheme.padding)

@@ -35,6 +35,7 @@ Rectangle {
     onAccepted: field.accepted()
   }
   Text {
+    textFormat: Text.PlainText
     visible: input.text === "" && !input.activeFocus
     anchors.fill: input
     verticalAlignment: Text.AlignVCenter

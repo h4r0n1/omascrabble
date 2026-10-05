@@ -33,7 +33,7 @@ import time  # noqa: E402
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
-from session import Session  # noqa: E402
+from session import Session, clean_name  # noqa: E402
 
 MAX_LINE = 2 * 1024 * 1024
 TILES = {"fr": 102, "en": 100}
@@ -305,7 +305,7 @@ class Helper:
                 continue
             last = int(os.path.getmtime(os.path.join(self.dir, name)))
             if key not in friends or friends[key]["last"] < last:
-                friends[key] = {"name": str(s.get("peerName", ""))[:40], "last": last}
+                friends[key] = {"name": clean_name(s.get("peerName", "")), "last": last}
         if friends:
             self.friends = friends
             self._save_friends()
@@ -370,7 +370,7 @@ class Helper:
             return
         if kind == "call" and isinstance(msg.get("config"), dict):
             self.incoming[key] = {"secret": secret, "config": msg["config"]}
-            emit({"ev": "call", "friend": key, "name": self.friends[key].get("name") or str(msg.get("name", ""))[:40],
+            emit({"ev": "call", "friend": key, "name": self.friends[key].get("name") or clean_name(msg.get("name", "")),
                   "config": msg["config"]})
         elif kind == "call-cancel":
             if self.incoming.get(key, {}).get("secret") == secret:

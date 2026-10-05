@@ -20,6 +20,7 @@ docs/ONLINE.md for the list.
 import hashlib
 import json
 import os
+import re
 import secrets
 import tempfile
 import time
@@ -28,6 +29,14 @@ from deck import Deck, CheatDetected, ProtocolError, commitment
 
 PROTOCOL = 1
 MAX_LOG = 5000
+
+# Control characters and bidirectional overrides (which can make a name read
+# as something else) never survive in a name from the other machine.
+_UNSAFE = re.compile("[\x00-\x1f\x7f-\x9f\u200e\u200f\u202a-\u202e\u2066-\u2069]")
+
+
+def clean_name(value):
+    return _UNSAFE.sub("", str(value)).strip()[:40]
 
 
 class Session:
@@ -153,7 +162,7 @@ class Session:
             return
         if not isinstance(msg.get("name"), str) or not isinstance(msg.get("have"), int):
             raise ProtocolError("bad hello")
-        self.s["peerName"] = msg["name"][:40]
+        self.s["peerName"] = clean_name(msg["name"])
         if self.s["role"] == "joiner" and self.s.get("id") is None and isinstance(msg.get("session"), str):
             self._adopt_id(msg["session"])
         elif msg.get("session") not in (None, self.s.get("id")):
@@ -447,7 +456,7 @@ class Session:
     def _blank(self, role, seat, name, tiles):
         return {
             "format": "omascrabble-online", "version": 1, "id": None, "role": role, "seat": seat,
-            "name": str(name)[:40], "peerName": "", "tiles": int(tiles), "stage": None, "config": None, "now": 0,
+            "name": clean_name(name), "peerName": "", "tiles": int(tiles), "stage": None, "config": None, "now": 0,
             "outSeq": 0, "outLog": [], "inSeq": 0, "inbound": [], "claims": {}, "wanted": [], "buffer": {},
             "rebags": {}, "rsWanted": None, "rsActive": None, "rs1": None, "deck": None,
         }

@@ -78,6 +78,7 @@ FocusScope {
         spacing: page.theme.space
         GameButton { theme: page.theme; icon: "back"; variant: "ghost"; focusable: false; tooltip: page.tr("common.back"); onClicked: page.closed(); anchors.verticalCenter: parent.verticalCenter }
         Text {
+          textFormat: Text.PlainText
           text: page.tr(page.mode === "join" ? "online.title.join" : "online.title.invite")
           color: page.theme.foreground
           font.family: page.theme.fontFamily
@@ -89,6 +90,7 @@ FocusScope {
 
       // Not ready yet.
       Text {
+        textFormat: Text.PlainText
         visible: !page.online || !page.online.checked
         text: page.tr("online.checking")
         color: page.theme.muted
@@ -108,6 +110,7 @@ FocusScope {
           bottomPadding: 10
           spacing: page.theme.space
           Text {
+            textFormat: Text.PlainText
             text: page.tr("online.missing.title")
             color: page.theme.foreground
             font.family: page.theme.fontFamily
@@ -115,6 +118,7 @@ FocusScope {
             font.weight: Font.Bold
           }
           Text {
+            textFormat: Text.PlainText
             width: parent.width
             wrapMode: Text.WordWrap
             text: page.online && page.online.pythonMissing ? page.tr("online.missing.python") : page.tr("online.missing.text")
@@ -129,6 +133,7 @@ FocusScope {
             radius: page.theme.radius
             color: page.theme.panelStrong
             TextEdit {
+              textFormat: TextEdit.PlainText
               id: cmd
               x: page.theme.space
               y: page.theme.space
@@ -155,6 +160,7 @@ FocusScope {
           width: parent.width
           spacing: 6
           Text {
+            textFormat: Text.PlainText
             text: page.tr("online.name")
             color: page.theme.muted
             font.family: page.theme.fontFamily
@@ -172,6 +178,7 @@ FocusScope {
             onEdited: function(t) { page.saveName(t) }
           }
           Text {
+            textFormat: Text.PlainText
             text: page.tr("online.name.detail")
             color: page.theme.muted
             font.family: page.theme.fontFamily
@@ -211,12 +218,14 @@ FocusScope {
                 anchors.leftMargin: 10
                 anchors.verticalCenter: parent.verticalCenter
                 Text {
+                  textFormat: Text.PlainText
                   text: modelData.name || "?"
                   color: page.theme.foreground
                   font.family: page.theme.fontFamily
                   font.pixelSize: page.theme.fontBody
                 }
                 Text {
+                  textFormat: Text.PlainText
                   text: page.tr(modelData.online ? "online.friend.online" : "online.friend.offline")
                   color: page.theme.muted
                   font.family: page.theme.fontFamily
@@ -243,6 +252,7 @@ FocusScope {
           width: parent.width
           theme: page.theme
           Text {
+            textFormat: Text.PlainText
             x: 10
             width: parent.width - 20
             topPadding: 10
@@ -272,6 +282,7 @@ FocusScope {
               width: parent.width
               spacing: page.theme.space
               TextEdit {
+                textFormat: TextEdit.PlainText
                 id: linkText
                 width: parent.width - copyButton.width - parent.spacing
                 anchors.verticalCenter: parent.verticalCenter
@@ -297,6 +308,7 @@ FocusScope {
               }
             }
             Text {
+              textFormat: Text.PlainText
               width: parent.width
               wrapMode: Text.WordWrap
               text: page.tr("online.link.help")
@@ -313,6 +325,7 @@ FocusScope {
           width: parent.width
           spacing: 6
           Text {
+            textFormat: Text.PlainText
             text: page.tr("online.paste")
             color: page.theme.muted
             font.family: page.theme.fontFamily
@@ -352,6 +365,7 @@ FocusScope {
             bottomPadding: 10
             spacing: page.theme.space
             Text {
+              textFormat: Text.PlainText
               text: page.online && page.online.proposal ? page.tr("online.proposal", { name: page.online.proposal.from }) : ""
               color: page.theme.foreground
               font.family: page.theme.fontFamily
@@ -359,6 +373,7 @@ FocusScope {
               font.weight: Font.Bold
             }
             Text {
+              textFormat: Text.PlainText
               width: parent.width
               wrapMode: Text.WordWrap
               text: page.configSummary(page.config)
@@ -367,6 +382,7 @@ FocusScope {
               font.pixelSize: page.theme.fontBody
             }
             Text {
+              textFormat: Text.PlainText
               id: missingDict
               readonly property bool missing: !!page.config && !!page.dictionary && page.dictionary.installed[page.config.dictionary || "open-fr"] !== true
               visible: missing
@@ -393,6 +409,7 @@ FocusScope {
 
         // ---------------------------------------------------- progress
         Text {
+          textFormat: Text.PlainText
           width: parent.width
           wrapMode: Text.WordWrap
           readonly property string stage: page.online ? page.online.stage : ""
@@ -410,6 +427,7 @@ FocusScope {
         }
 
         Text {
+          textFormat: Text.PlainText
           width: parent.width
           wrapMode: Text.WordWrap
           text: page.tr("setup.online.note")

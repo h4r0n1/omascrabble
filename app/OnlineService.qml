@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import "format.mjs" as Format
 
 // The online helper (net/online.py), started on demand and kept running
 // while the plugin is loaded. Commands go out as JSON lines on its stdin,
@@ -126,14 +127,14 @@ Item {
       gameId = String(ev.gameId || "")
       break
     case "peer":
-      peerName = String(ev.name || "").slice(0, 40)
+      peerName = Format.cleanName(ev.name)
       peerConnected = true
       if (stage === "inviting") stage = "dealing"
       break
     case "proposal":
       // A friend's call already accepted: the proposal is accepted for us.
       if (ev.autoAccept) { stage = "dealing"; break }
-      proposal = { config: ev.config || {}, from: String(ev.from || "").slice(0, 40), gameId: String(ev.gameId || "") }
+      proposal = { config: ev.config || {}, from: Format.cleanName(ev.from), gameId: String(ev.gameId || "") }
       stage = "proposal"
       break
     case "accepted":
@@ -145,7 +146,7 @@ Item {
       break
     case "friends":
       friends = Array.isArray(ev.list) ? ev.list.filter(function(f) { return f && typeof f.id === "string" }).map(function(f) {
-        return { id: f.id, name: String(f.name || "").slice(0, 40), online: !!f.online, last: Number(f.last) || 0 }
+        return { id: f.id, name: Format.cleanName(f.name), online: !!f.online, last: Number(f.last) || 0 }
       }) : []
       if (friends.length > 0) friendsKnown()
       break
@@ -153,7 +154,7 @@ Item {
       calling = { friend: String(ev.friend || ""), online: !!ev.online }
       break
     case "call":
-      incomingCall = { friend: String(ev.friend || ""), name: String(ev.name || "").slice(0, 40), config: ev.config || {} }
+      incomingCall = { friend: String(ev.friend || ""), name: Format.cleanName(ev.name), config: ev.config || {} }
       break
     case "call-cancelled":
       if (incomingCall && incomingCall.friend === ev.friend) incomingCall = null

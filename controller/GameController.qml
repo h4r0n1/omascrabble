@@ -6,6 +6,7 @@ import "../engine/notation.mjs" as Notation
 import "../engine/rules.mjs" as Rules
 import "../ai/difficulty.mjs" as Difficulty
 import "../engine/tileset.mjs" as Tileset
+import "../app/format.mjs" as Format
 
 // GameController: the bridge between the UI and the GameEngine.
 //
@@ -583,7 +584,7 @@ QtObject {
     // Wait for the game's word list (the online screen loads it).
     if (!provider || (c.dictionary && provider.id() !== c.dictionary)) { onlineQueue = onlineQueue.concat([ev]); return }
     stopAi()
-    var names = Array.isArray(ev.names) ? ev.names.map(function(n) { return String(n || "").slice(0, 40) }) : ["", ""]
+    var names = Array.isArray(ev.names) ? ev.names.slice(0, 2).map(Format.cleanName) : ["", ""]
     var seat = ev.seat === 1 ? 1 : 0
     var created = guard("online game", function() {
       return Engine.createGame({
@@ -681,7 +682,9 @@ QtObject {
   }
 
   function notify(title, body) {
-    notifier.command = ["notify-send", "-a", "Omascrabble", String(title), String(body)]
+    // The body can carry the other player's name; notification servers may
+    // read markup in it, so it's escaped.
+    notifier.command = ["notify-send", "-a", "Omascrabble", String(title), Format.escapeMarkup(body)]
     notifier.running = true
   }
 

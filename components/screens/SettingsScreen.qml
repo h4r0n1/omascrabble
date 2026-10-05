@@ -541,6 +541,7 @@ FocusScope {
             width: parent.width
             spacing: 6
             Text {
+              textFormat: Text.PlainText
               text: page.tr("online.name")
               color: page.theme.muted
               font.family: page.theme.fontFamily
@@ -562,6 +563,7 @@ FocusScope {
               Component.onCompleted: text = page.s.online.name
             }
             Text {
+              textFormat: Text.PlainText
               text: page.tr("online.name.detail")
               color: page.theme.muted
               font.family: page.theme.fontFamily
@@ -594,6 +596,7 @@ FocusScope {
             title: page.tr("online.friends")
             readonly property string removing: parent.removing
             Text {
+              textFormat: Text.PlainText
               visible: !page.online || page.online.friends.length === 0
               x: 10
               width: parent.width - 20
@@ -624,8 +627,9 @@ FocusScope {
                   anchors.left: fdot.right
                   anchors.leftMargin: 10
                   anchors.verticalCenter: parent.verticalCenter
-                  Text { text: modelData.name || "?"; color: page.theme.foreground; font.family: page.theme.fontFamily; font.pixelSize: page.theme.fontBody }
+                  Text { textFormat: Text.PlainText; text: modelData.name || "?"; color: page.theme.foreground; font.family: page.theme.fontFamily; font.pixelSize: page.theme.fontBody }
                   Text {
+                    textFormat: Text.PlainText
                     text: page.tr(modelData.online ? "online.friend.online" : "online.friend.offline")
                     color: page.theme.muted; font.family: page.theme.fontFamily; font.pixelSize: page.theme.fontCaption
                   }
