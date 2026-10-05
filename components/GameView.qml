@@ -213,21 +213,28 @@ FocusScope {
 
     readonly property var ctl: view.controller
     readonly property bool wide: width >= height * 1.12 && width >= 820
+    // Wide but short (laptop screens): the rack and the buttons move to the
+    // side column so the board can use the full height.
+    readonly property bool dock: wide && height < 820
     readonly property bool practice: ctl && ctl.game ? ctl.game.mode === "practice" : false
     readonly property int playerCount: ctl && ctl.game ? ctl.game.players.length : 0
     readonly property int gap: appTheme.spaceLarge + 2
 
-    readonly property real sidebarWidth: wide ? Math.max(270, Math.min(380, width * 0.3)) : 0
+    readonly property real sidebarWidth: !wide ? 0 : dock ? Math.max(300, Math.min(400, width * 0.32)) : Math.max(270, Math.min(380, width * 0.3))
     readonly property real headerHeight: header.implicitHeight
     readonly property real cardsHeight: wide ? 0 : (playerCount > 0 ? cardsRow.implicitHeight : 0)
     readonly property real controlsHeight: appTheme.controlHeight
     // First guess of the board's cell size, to size the rack proportionally.
     readonly property real boardGuess: Math.min(wide ? width - sidebarWidth - gap : width,
       height - headerHeight - cardsHeight - controlsHeight - 4 * gap - 80)
-    readonly property real rackTile: Math.round(Math.max(appTheme.largerTiles ? 40 : 34, Math.min(appTheme.largerTiles ? 72 : 62, boardGuess / 15.6 * 1.32)))
+    readonly property real rackTile: dock
+      ? Math.floor(Math.max(30, Math.min(appTheme.largerTiles ? 60 : 54, sidebarWidth / 8.24)))
+      : Math.round(Math.max(appTheme.largerTiles ? 40 : 34, Math.min(appTheme.largerTiles ? 72 : 62, boardGuess / 15.6 * 1.32)))
     readonly property real rackHeight: rackTile * 1.55
-    readonly property real boardSpace: Math.max(200, Math.min(wide ? width - sidebarWidth - gap : width,
-      height - headerHeight - cardsHeight - rackHeight - controlsHeight - (wide ? 3 : 4) * gap - (wide ? 0 : previewLine.height)))
+    readonly property real boardSpace: dock
+      ? Math.max(200, Math.min(width - sidebarWidth - gap, height - headerHeight - gap))
+      : Math.max(200, Math.min(wide ? width - sidebarWidth - gap : width,
+          height - headerHeight - cardsHeight - rackHeight - controlsHeight - (wide ? 3 : 4) * gap - (wide ? 0 : previewLine.height)))
 
     GameHeader {
       id: header
@@ -332,11 +339,23 @@ FocusScope {
         }
       }
 
+    }
+
+
+    // Rack and buttons: under the board, or in the side column (dock).
+    Item {
+      id: playArea
+      z: 2
+      width: gameScreen.dock ? gameScreen.sidebarWidth : Math.max(board.width, rack.width)
+      height: rack.height + gameScreen.gap + controls.height
+      x: gameScreen.dock ? sidebar.x : boardColumn.x + (boardColumn.width - width) / 2
+      y: gameScreen.dock ? sidebar.y + dockSlot.y
+         : boardColumn.y + (previewLine.visible ? previewLine.y + previewLine.height : board.y + board.height) + gameScreen.gap
+
       Rack {
         id: rack
-        anchors.horizontalCenter: board.horizontalCenter
-        anchors.top: gameScreen.wide ? board.bottom : previewLine.bottom
-        anchors.topMargin: gameScreen.gap
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.top: parent.top
         theme: appTheme
         controller: view.controller
         tileSize: gameScreen.rackTile
@@ -359,12 +378,12 @@ FocusScope {
         id: controls
         anchors.top: rack.bottom
         anchors.topMargin: gameScreen.gap
-        anchors.horizontalCenter: board.horizontalCenter
-        width: Math.max(board.width, rack.width)
+        anchors.horizontalCenter: parent.horizontalCenter
+        width: parent.width
         theme: appTheme
         controller: view.controller
         shortcuts: view.shortcuts
-        compact: width < 560
+        compact: width < 560 || gameScreen.dock
         focusIndex: view.keyboardMode && view.keyZone === "controls" && keys.activeFocus ? view.controlIndex : -1
         scoreText: view.scoreSummary()
         scoreValid: !!(view.controller.preview && view.controller.preview.valid)
@@ -375,8 +394,7 @@ FocusScope {
         onPassRequested: view.askPass()
         onPlayRequested: view.playMove()
         onChallengeRequested: view.controller.challenge()
-      }
-    }
+      }    }
 
     // Wide: sidebar with cards, the move panel and the history.
     Column {
@@ -408,6 +426,14 @@ FocusScope {
             function onScoreFlyout(player, points, bingo) { if (player === index) scored(points, bingo) }
           }
         }
+      }
+
+      // Dock: room for the rack and buttons (placed over it by playArea).
+      Item {
+        id: dockSlot
+        visible: gameScreen.dock
+        width: sidebar.width
+        height: visible ? playArea.height : 0
       }
 
       Rectangle {
