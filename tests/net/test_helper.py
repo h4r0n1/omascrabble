@@ -18,8 +18,8 @@ HELPER = os.path.join(os.path.dirname(__file__), "..", "..", "net", "online.py")
 
 
 class Proc:
-    def __init__(self, state_dir):
-        env = dict(os.environ, OMASCRABBLE_TRANSPORT="tcp", OMASCRABBLE_TCP_PORT="0")
+    def __init__(self, state_dir, transport="tcp"):
+        env = dict(os.environ, OMASCRABBLE_TRANSPORT=transport, OMASCRABBLE_TCP_PORT="0")
         self.state_dir = state_dir
         self.p = subprocess.Popen([sys.executable, HELPER, "--state-dir", state_dir], stdin=subprocess.PIPE,
                                   stdout=subprocess.PIPE, env=env)

@@ -34,7 +34,7 @@ class Session:
     def __init__(self, path, send, emit):
         self.path = path
         self._send_raw = send       # dict -> peer
-        self._emit = emit           # dict -> game
+        self._emit_raw = emit       # dict -> game
         self.connected = False
         self.s = None               # the persisted state (a plain dict)
         self.deck = None
@@ -53,6 +53,12 @@ class Session:
         self.s = self._blank("joiner", 1, name, tiles)
         self.s["stage"] = "joining"
         self._save()
+
+    def _emit(self, event):
+        # Save first: once the game has seen an event, a restart must not
+        # replay the message that caused it.
+        self._save()
+        self._emit_raw(event)
 
     @classmethod
     def load(cls, path, send, emit):

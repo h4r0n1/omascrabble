@@ -5,9 +5,10 @@ both machines are equal, both run the whole game, and neither can see the
 other's rack or the order of the bag. This is an optional add-on: the base
 game keeps its one-line install and stays fully offline.
 
-Status: built and tested end to end over a direct connection (two game
-processes playing a whole game through the helper). The Tox transport
-(`net/tox_transport.py`) is tested once `toxcore` is installed.
+Status: built and tested end to end — two game processes playing a whole
+game through the helper, over a direct connection and over the real Tox
+network (`OMASCRABBLE_TOX_TEST=1 python3 -m unittest tests/net/test_tox.py`
+runs the helper-level Tox test; it needs toxcore and the internet).
 
 ## Pieces
 

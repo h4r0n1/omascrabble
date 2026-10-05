@@ -18,6 +18,7 @@ directory, readable by the user only.
 
 import ctypes
 import ctypes.util
+import ipaddress
 import json
 import os
 import random
@@ -186,10 +187,25 @@ class ToxNode:
     def _bootstrap(self):
         nodes = list(self._nodes or [])
         random.shuffle(nodes)
-        for n in nodes[:8]:
+        used = 0
+        for n in nodes:
+            if used >= 8:
+                break
+            # Only literal addresses: a name (or the list's "-" placeholder)
+            # would make toxcore resolve it, blocking the helper.
+            host = None
+            for field in ("ipv4", "ipv6"):
+                try:
+                    host = str(ipaddress.ip_address(str(n.get(field, "")).strip("[]")))
+                    break
+                except ValueError:
+                    continue
+            if host is None:
+                continue
+            used += 1
             try:
                 key = _buf(bytes.fromhex(n["public_key"]))
-                host = str(n.get("ipv4") or n.get("ipv6")).encode()
+                host = host.encode()
                 if n.get("status_udp"):
                     self.lib.tox_bootstrap(self.tox, host, int(n["port"]), key, None)
                 for port in (n.get("tcp_ports") or [])[:2]:

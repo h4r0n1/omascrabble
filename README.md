@@ -185,6 +185,7 @@ goes through `engine/game.mjs` `applyAction()`, which re-validates it.
 node tests/run.mjs [filter]
 tests/run-qml.sh
 python3 -m unittest discover -s tests/net     # online: bag, sessions, helpers
+OMASCRABBLE_TOX_TEST=1 python3 -m unittest tests/net/test_tox.py   # over the Tox network
 ```
 
 Online play end to end — two game processes playing each other through the
