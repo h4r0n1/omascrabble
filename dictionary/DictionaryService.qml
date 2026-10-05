@@ -38,7 +38,7 @@ Item {
   // Which dictionaries exist on this machine, for the setup screen.
   property var installed: ({ "open-fr": true })
   readonly property var choices: Registry.DICTIONARIES.map(function(d) {
-    return { id: d.id, label: d.label, badge: d.badge, official: d.official, note: d.note, available: service.installed[d.id] === true }
+    return { id: d.id, language: d.language, official: d.official, available: service.installed[d.id] === true }
   })
 
   signal ready()

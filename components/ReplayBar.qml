@@ -47,14 +47,14 @@ Rectangle {
       anchors.verticalCenter: parent.verticalCenter
       horizontalAlignment: Text.AlignHCenter
       elide: Text.ElideRight
-      text: !bar.move ? "" : "Coup " + (bar.index + 1) + " / " + bar.moveCount + "  ·  "
-        + (bar.move.type === "play" ? (bar.move.words[0].notation || bar.move.words[0].word) + " " + bar.move.score : bar.move.type === "pass" ? "passe" : bar.move.type === "exchange" ? "échange" : bar.move.type)
+      text: !bar.move ? "" : bar.theme.t("replay.move", { n: bar.index + 1, total: bar.moveCount }) + "  ·  "
+        + (bar.move.type === "play" ? (bar.move.words[0].notation || bar.move.words[0].word) + " " + bar.move.score : bar.move.type === "pass" ? bar.theme.t("replay.pass") : bar.move.type === "exchange" ? bar.theme.t("replay.exchange") : bar.move.type)
       color: bar.theme.foreground
       font.family: bar.theme.fontFamily
       font.pixelSize: bar.theme.fontBody
     }
     GameButton { theme: bar.theme; icon: "next"; variant: "ghost"; focusable: false; onClicked: bar.index = Math.min(bar.moveCount - 1, bar.index + 1) }
     GameButton { theme: bar.theme; icon: "last"; variant: "ghost"; focusable: false; onClicked: bar.index = bar.moveCount - 1 }
-    GameButton { theme: bar.theme; icon: "close"; variant: "ghost"; focusable: false; tooltip: "Quitter la relecture"; onClicked: bar.closed() }
+    GameButton { theme: bar.theme; icon: "close"; variant: "ghost"; focusable: false; tooltip: bar.theme.t("replay.close"); onClicked: bar.closed() }
   }
 }

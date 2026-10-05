@@ -17,7 +17,7 @@ Item {
   property var result: null           // validator result
   property bool showValidity: true
   property bool compact: false
-  property string emptyText: "Placez des lettres sur le plateau."
+  property string emptyText: theme ? theme.t("preview.empty") : ""
   property bool clickable: false
   signal wordActivated(string word)
 
@@ -44,7 +44,7 @@ Item {
     Text {
       visible: preview.structural
       width: parent.width
-      text: preview.result && preview.result.message ? preview.result.message : ""
+      text: preview.result && preview.result.reason ? preview.theme.t("reason." + preview.result.reason, { words: preview.result.invalidWords || [] }) : ""
       color: preview.theme.urgent
       font.family: preview.theme.fontFamily
       font.pixelSize: preview.theme.fontSmall
@@ -80,7 +80,7 @@ Item {
           anchors.left: wordText.right
           anchors.leftMargin: 6
           anchors.verticalCenter: wordText.verticalCenter
-          text: "mot invalide"
+          text: preview.theme.t("preview.invalidWord")
           color: preview.theme.urgent
           font.family: preview.theme.fontFamily
           font.pixelSize: preview.theme.fontCaption
@@ -102,7 +102,7 @@ Item {
       height: bonusText.implicitHeight
       Text {
         id: bonusText
-        text: "Scrabble (7 lettres)"
+        text: preview.theme.t("preview.bingo")
         color: preview.theme.accent
         font.family: preview.theme.fontFamily
         font.pixelSize: preview.theme.fontBody
@@ -131,7 +131,7 @@ Item {
       height: totalText.implicitHeight
       Text {
         id: totalText
-        text: "TOTAL"
+        text: preview.theme.t("preview.total")
         color: preview.theme.muted
         font.family: preview.theme.fontFamily
         font.pixelSize: preview.theme.fontSmall
@@ -142,7 +142,7 @@ Item {
       Text {
         id: totalValue
         anchors.right: parent.right
-        text: preview.result ? preview.result.score + " pts" : ""
+        text: preview.result ? preview.theme.t("common.pts", { n: preview.result.score }) : ""
         color: preview.result && preview.result.valid ? preview.theme.foreground : preview.theme.muted
         font.family: preview.theme.fontFamily
         font.pixelSize: preview.theme.fontHeading
@@ -153,7 +153,7 @@ Item {
     Text {
       visible: !!(preview.result && !preview.result.valid && !preview.structural && preview.result.reason !== "INVALID_WORD" && preview.result.reason !== "INVALID_CROSS_WORD")
       width: parent.width
-      text: preview.result && preview.result.message ? preview.result.message : ""
+      text: preview.result && preview.result.reason ? preview.theme.t("reason." + preview.result.reason, { words: preview.result.invalidWords || [] }) : ""
       color: preview.theme.urgent
       font.family: preview.theme.fontFamily
       font.pixelSize: preview.theme.fontSmall

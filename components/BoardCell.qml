@@ -151,6 +151,7 @@ Item {
   }
 
   Accessible.role: Accessible.Cell
-  Accessible.name: String.fromCharCode(65 + row) + (col + 1) + ", " + theme.premiumName(premium)
-    + (occupied ? ", " + (joker ? "joker " : "") + letter : ", vide")
+  Accessible.name: cellLabel + ", " + theme.premiumName(premium)
+    + (occupied ? ", " + (joker ? theme.t("a11y.joker") + " " : "") + letter : ", " + theme.t("a11y.empty"))
+  property string cellLabel: ""
 }

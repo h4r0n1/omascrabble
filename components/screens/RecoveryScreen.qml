@@ -26,7 +26,7 @@ Rectangle {
     Text {
       width: parent.width
       wrapMode: Text.WordWrap
-      text: recovery.dictionary && recovery.dictionary.status === "missing" ? "Dictionnaire introuvable" : "Le dictionnaire n’a pas pu être chargé"
+      text: recovery.theme.t(recovery.dictionary && recovery.dictionary.status === "missing" ? "recovery.missing" : "recovery.failed")
       color: recovery.theme.foreground
       font.family: recovery.theme.fontFamily
       font.pixelSize: recovery.theme.fontDisplay
@@ -36,8 +36,7 @@ Rectangle {
       width: parent.width
       wrapMode: Text.WordWrap
       lineHeight: 1.2
-      text: "Sans dictionnaire, les mots ne peuvent pas être vérifiés et l’ordinateur ne peut pas jouer. Votre partie sauvegardée n’est pas touchée.\n\n"
-        + "Si vous avez supprimé ou modifié les fichiers du plugin, réinstallez-le (omarchy plugin update omascrabble) ; pour un ODS installé à la main, vérifiez le fichier dans ~/.local/share/omascrabble/dictionaries."
+      text: recovery.theme.t("recovery.text")
       color: recovery.theme.muted
       font.family: recovery.theme.fontFamily
       font.pixelSize: recovery.theme.fontBody
@@ -63,13 +62,13 @@ Rectangle {
     }
     Row {
       spacing: recovery.theme.space
-      GameButton { theme: recovery.theme; variant: "primary"; text: "Réessayer"; onClicked: recovery.dictionary.retry() }
+      GameButton { theme: recovery.theme; variant: "primary"; text: recovery.theme.t("common.retry"); onClicked: recovery.dictionary.retry() }
       GameButton {
         theme: recovery.theme
         variant: "secondary"
-        text: "Revenir au lexique ouvert"
-        visible: recovery.dictionary && recovery.dictionary.dictionaryId !== "open-fr"
-        onClicked: recovery.dictionary.load("open-fr")
+        text: recovery.theme.t("recovery.backToOpen")
+        visible: recovery.dictionary && recovery.dictionary.dictionaryId.indexOf("open-") !== 0
+        onClicked: recovery.dictionary.load(recovery.dictionary.dictionaryId === "collins" ? "open-en" : "open-fr")
       }
     }
   }

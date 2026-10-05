@@ -42,8 +42,8 @@ Rectangle {
     Text {
       anchors.horizontalCenter: parent.horizontalCenter
       text: loading.dictionary && loading.dictionary.status === "loading"
-        ? "Chargement du dictionnaire… " + Math.round(loading.dictionary.progress * 100) + " %"
-        : "Chargement…"
+        ? loading.theme.t("loading.dictionary", { n: Math.round(loading.dictionary.progress * 100) })
+        : loading.theme.t("loading.generic")
       color: loading.theme.muted
       font.family: loading.theme.fontFamily
       font.pixelSize: loading.theme.fontBody

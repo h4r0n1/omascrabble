@@ -35,45 +35,43 @@ export const REASON = Object.freeze({
   BAD_PLAYER: "BAD_PLAYER"
 })
 
-const NBSP = " "
-
+// Developer-facing English text for logs and tests. Players see the
+// interface catalogs ("reason.<CODE>"), which translate these codes.
 const MESSAGES = {
-  OK: "Coup valide",
-  NO_TILES: "Posez au moins une lettre.",
-  TOO_MANY_TILES: "Vous ne pouvez pas poser plus de lettres que votre chevalet n’en contient.",
-  BAD_PLACEMENT: "Placement invalide.",
-  OUT_OF_BOUNDS: "Cette case est hors du plateau.",
-  CELL_OCCUPIED: "Cette case est déjà occupée.",
-  DUPLICATE_TILE: "Le même jeton est utilisé deux fois.",
-  DUPLICATE_POSITION: "Deux jetons sont posés sur la même case.",
-  TILE_NOT_OWNED: "Ce jeton n’est pas sur votre chevalet.",
-  JOKER_LETTER_MISSING: "Choisissez la lettre que représente le joker.",
-  JOKER_LETTER_INVALID: "Un joker représente une lettre de A à Z.",
-  NOT_A_JOKER: "Seul un joker peut représenter une autre lettre.",
-  NOT_IN_LINE: "Les lettres doivent être sur une même ligne ou une même colonne.",
-  GAP_IN_WORD: "Les lettres posées ne doivent pas laisser de trou.",
-  FIRST_MOVE_NOT_ON_CENTER: "Le premier mot doit passer par l’étoile centrale.",
-  NOT_CONNECTED: "Le mot doit toucher une lettre déjà posée.",
-  SINGLE_LETTER: "Un mot compte au moins deux lettres.",
-  INVALID_WORD: "Mot invalide",
-  INVALID_CROSS_WORD: "Mot croisé invalide",
-  DICTIONARY_UNAVAILABLE: "Le dictionnaire n’est pas disponible.",
-  GAME_OVER: "La partie est terminée.",
-  NOT_YOUR_TURN: "Ce n’est pas votre tour.",
-  UNKNOWN_ACTION: "Action inconnue.",
-  BAG_TOO_SMALL: "L’échange n’est possible que s’il reste au moins 7 lettres dans le sac.",
-  NOTHING_TO_EXCHANGE: "Choisissez au moins une lettre à échanger.",
-  NO_PENDING_MOVE: "Il n’y a aucun coup à contester.",
-  CHALLENGE_PENDING: "Le coup précédent peut encore être contesté.",
-  TIME_NOT_EXPIRED: "Le temps n’est pas écoulé.",
-  BAD_PLAYER: "Joueur inconnu."
+  OK: "Valid move",
+  NO_TILES: "Place at least one tile.",
+  TOO_MANY_TILES: "More tiles than the rack holds.",
+  BAD_PLACEMENT: "Invalid placement.",
+  OUT_OF_BOUNDS: "Square off the board.",
+  CELL_OCCUPIED: "Square already taken.",
+  DUPLICATE_TILE: "Same tile used twice.",
+  DUPLICATE_POSITION: "Two tiles on one square.",
+  TILE_NOT_OWNED: "Tile not on the player's rack.",
+  JOKER_LETTER_MISSING: "Blank needs a letter.",
+  JOKER_LETTER_INVALID: "Blank letter must be A-Z.",
+  NOT_A_JOKER: "Only a blank takes a letter.",
+  NOT_IN_LINE: "Tiles not in one line.",
+  GAP_IN_WORD: "Gap between placed tiles.",
+  FIRST_MOVE_NOT_ON_CENTER: "First word must cover the centre.",
+  NOT_CONNECTED: "Word not connected.",
+  SINGLE_LETTER: "No word of two letters or more.",
+  INVALID_WORD: "Invalid word",
+  INVALID_CROSS_WORD: "Invalid cross word",
+  DICTIONARY_UNAVAILABLE: "Dictionary unavailable.",
+  GAME_OVER: "Game over.",
+  NOT_YOUR_TURN: "Not this player's turn.",
+  UNKNOWN_ACTION: "Unknown action.",
+  BAG_TOO_SMALL: "Bag too small to exchange.",
+  NOTHING_TO_EXCHANGE: "Nothing to exchange.",
+  NO_PENDING_MOVE: "No move to challenge.",
+  CHALLENGE_PENDING: "Previous move can still be challenged.",
+  TIME_NOT_EXPIRED: "Time has not run out.",
+  BAD_PLAYER: "Unknown player."
 }
 
 export function messageFor(reason, detail) {
-  const base = MESSAGES[reason] || "Coup invalide"
+  const base = MESSAGES[reason] || "Invalid move"
   if ((reason === REASON.INVALID_WORD || reason === REASON.INVALID_CROSS_WORD) && detail && detail.length)
-    return base + NBSP + ": " + detail.join(", ")
-  if (reason === REASON.BAG_TOO_SMALL && Number.isInteger(detail))
-    return "L’échange n’est possible que s’il reste au moins " + detail + " lettres dans le sac."
+    return base + ": " + detail.join(", ")
   return base
 }

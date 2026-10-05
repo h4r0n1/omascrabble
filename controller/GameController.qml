@@ -4,6 +4,7 @@ import "../engine/board.mjs" as BoardModel
 import "../engine/notation.mjs" as Notation
 import "../engine/rules.mjs" as Rules
 import "../ai/difficulty.mjs" as Difficulty
+import "../engine/tileset.mjs" as Tileset
 
 // GameController: the bridge between the UI and the GameEngine.
 //
@@ -22,6 +23,8 @@ QtObject {
   property var worker: null       // WorkerScript hosting the AI
   property var settings: saves ? saves.settings : ({})
   property bool windowActive: true
+  // Translator for notices (the view sets it to theme.t).
+  property var tr: function(key, args) { return key }
 
   // Engine state and UI state around it.
   property var game: null
@@ -60,6 +63,12 @@ QtObject {
 
   // Derived.
   readonly property bool hasGame: game !== null
+  // Language of the game in progress (tiles, dictionary, notation) — not
+  // the interface language.
+  readonly property string gameLanguage: {
+    if (!game) return "fr"
+    try { return Tileset.getTileset(game.rules.tileset).language } catch (e) { return "fr" }
+  }
   readonly property bool isOver: game !== null && game.status === "ended"
   readonly property bool isActive: game !== null && game.status === "active"
   readonly property int current: game ? game.current : 0
@@ -103,7 +112,7 @@ QtObject {
       return fn()
     } catch (e) {
       console.warn("omascrabble: " + label + " failed:", e && e.stack ? e.stack : e)
-      say("Une erreur inattendue est survenue (" + label + "). La partie est intacte.", "error")
+      say(tr("notice.unexpected", { what: label }), "error")
       return fallback
     }
   }
@@ -252,16 +261,16 @@ QtObject {
         entry.position = m.position
         entry.extra = m.words.length > 1 ? m.words.slice(1).map(function(w) { return w.notation || w.word }).join(", ") : ""
       } else if (m.type === "pass") {
-        entry.text = "Passe"
+        entry.text = tr("history.pass")
       } else if (m.type === "exchange") {
-        entry.text = "Échange (" + m.count + ")"
+        entry.text = tr("history.exchange", { n: m.count })
       } else if (m.type === "challenge") {
-        entry.text = m.success ? "Contestation réussie" : "Contestation refusée"
+        entry.text = tr(m.success ? "history.challengeWon" : "history.challengeLost")
         if (m.penalty && m.penalty.type === "points") entry.score = -m.penalty.points
       } else if (m.type === "resign") {
-        entry.text = "Abandon"
+        entry.text = tr("history.resign")
       } else if (m.type === "timeout") {
-        entry.text = "Temps écoulé"
+        entry.text = tr("history.timeout")
       }
       out.push(entry)
     }
@@ -276,14 +285,31 @@ QtObject {
     return game.rules.time.totalMs - used
   }
 
+  // Default players are stored without a name (older saves: "Vous",
+  // "Ordinateur", "Ordinateur 2"…) and labelled in the interface language.
+  readonly property var defaultNames: ["", "Vous", "Ordinateur", "Ordinateur 1", "Ordinateur 2", "Joueur 1", "Joueur 2",
+                                       "You", "Computer", "Computer 1", "Computer 2", "Player 1", "Player 2"]
   function playerLabel(index) {
-    if (!game) return ""
-    return game.players[index].name
+    if (!game || !game.players[index]) return ""
+    var p = game.players[index]
+    if (defaultNames.indexOf(p.name) === -1) return p.name
+    if (p.kind === "ai") {
+      var ais = game.players.filter(function(q) { return q.kind === "ai" }).length
+      return ais > 1 ? tr("player.computerN", { n: index + 1 }) : tr("player.computer")
+    }
+    if (game.mode === "human_vs_human") return tr("player.defaultName", { n: index + 1 })
+    return tr("player.you")
   }
 
   function difficultyLabel(index) {
     if (!game || game.players[index].kind !== "ai") return ""
-    return Difficulty.DIFFICULTY_LABELS[game.players[index].difficulty] || ""
+    return tr("difficulty." + (game.players[index].difficulty || "casual"))
+  }
+
+  // A refusal, in the interface language.
+  function reasonText(reason, result) {
+    if (!reason) return tr("reason.UNKNOWN_ACTION")
+    return tr("reason." + reason, { words: result && result.invalidWords ? result.invalidWords : [] })
   }
 
   // ------------------------------------------------------------ previews
@@ -292,7 +318,7 @@ QtObject {
     if (!game || pending.length === 0) { preview = null; revision++; return }
     var checkWords = !!(settings.gameplay && settings.gameplay.showWordValidation)
       && game.rules.validation === Rules.VALIDATION.IMMEDIATE && dictionaryReady
-    preview = guard("aperçu", function() {
+    preview = guard("preview", function() {
       return Engine.previewMove(game, viewer, pending, provider, { checkWords: checkWords })
     }, null)
     revision++
@@ -307,7 +333,7 @@ QtObject {
     var trial = pending.filter(function(p) { return p.tileId !== selectedTileId }).concat([{ tileId: selectedTileId, row: row, col: col }])
     var checkWords = !!(settings.gameplay && settings.gameplay.showWordValidation)
       && game.rules.validation === Rules.VALIDATION.IMMEDIATE && dictionaryReady
-    hoverPreview = guard("survol", function() { return Engine.previewMove(game, viewer, trial, provider, { checkWords: checkWords }) }, null)
+    hoverPreview = guard("hover", function() { return Engine.previewMove(game, viewer, trial, provider, { checkWords: checkWords }) }, null)
   }
 
   // Can the selected tile go to (row, col)? Used for the subtle error state.
@@ -460,9 +486,9 @@ QtObject {
     if (a.player === game.current) a.elapsedMs = Math.max(0, Date.now() - turnStartedAt)
     var res = guard("action", function() {
       return Engine.applyAction(game, a, { dictionary: provider, now: Date.now() })
-    }, { ok: false, message: "Erreur interne." })
+    }, { ok: false, reason: "UNKNOWN_ACTION" })
     if (!res.ok) {
-      moveRejected(res.message || "Coup invalide", res.result || null)
+      moveRejected(reasonText(res.reason, res.result), res.result || null)
       return res
     }
     var before = game
@@ -515,7 +541,7 @@ QtObject {
   }
 
   function exchange(tileIds) {
-    if (!legal.exchange) { say("L’échange n’est possible que s’il reste au moins 7 lettres dans le sac.", "error"); return false }
+    if (!legal.exchange) { say(tr("notice.exchangeNeedsBag"), "error"); return false }
     recallAll()
     return applyGameAction({ type: "exchange", player: viewer, tileIds: tileIds }).ok
   }
@@ -586,7 +612,7 @@ QtObject {
 
   function newGame(config) {
     stopAi()
-    if (!provider) { say("Le dictionnaire n’est pas encore chargé.", "error"); return false }
+    if (!provider) { say(tr("notice.dictionaryNotLoaded"), "error"); return false }
     var c = config || {}
     var mode = c.mode || "human_vs_ai"
     var minutes = Number(c.timeMinutes) || 0
@@ -595,11 +621,11 @@ QtObject {
       challenge: { penalty: c.challengePenalty || "none", penaltyPoints: 10 },
       time: { totalMs: minutes * 60000, onTimeout: "end_game" }
     }
-    var names = c.playerNames || ["Joueur 1", "Joueur 2"]
+    var names = c.playerNames || ["", ""]
     var players
     var first = 0
     if (mode === "human_vs_ai") {
-      players = [{ name: "Vous", kind: "human" }, { name: "Ordinateur", kind: "ai", difficulty: c.difficulty || "casual" }]
+      players = [{ name: "", kind: "human" }, { name: "", kind: "ai", difficulty: c.difficulty || "casual" }]
       first = c.firstPlayer === "ai" ? 1 : c.firstPlayer === "random" ? "random" : 0
     } else if (mode === "human_vs_human") {
       players = [{ name: names[0], kind: "human" }, { name: names[1], kind: "human" }]
@@ -607,13 +633,13 @@ QtObject {
     } else if (mode === "ai_vs_ai") {
       var d1 = c.difficulty || "expert"
       var d2 = c.difficulty2 || d1
-      players = [{ name: "Ordinateur 1", kind: "ai", difficulty: d1 }, { name: "Ordinateur 2", kind: "ai", difficulty: d2 }]
+      players = [{ name: "", kind: "ai", difficulty: d1 }, { name: "", kind: "ai", difficulty: d2 }]
       first = 0
       rules.validation = "immediate"
     } else {
-      players = [{ name: names[0] || "Vous", kind: "human" }]
+      players = [{ name: "", kind: "human" }]
     }
-    var created = guard("nouvelle partie", function() {
+    var created = guard("new game", function() {
       return Engine.createGame({
         mode: mode,
         players: players,
@@ -817,7 +843,7 @@ QtObject {
     if (msg.type === "error") {
       console.warn("omascrabble: AI error:", msg.stage, msg.message)
       aiThinking = false
-      say("L’ordinateur n’a pas pu jouer et passe son tour.", "error")
+      say(tr("notice.computerFailed"), "error")
       if (isActive && game.players[game.current].kind === "ai") applyGameAction({ type: "pass", player: game.current })
     }
   }

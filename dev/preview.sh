@@ -33,7 +33,7 @@ if [[ $scenario == corrupt ]]; then
 fi
 
 PREVIEW_SCENARIO="$scenario" PREVIEW_OUTPUT="$output" PREVIEW_WIDTH="$width" PREVIEW_HEIGHT="$height" \
-PREVIEW_PLUGIN="$repo" PREVIEW_HC="${PREVIEW_HC:-}" XDG_STATE_HOME="$work/state" XDG_DATA_HOME="$work/data" \
+PREVIEW_PLUGIN="$repo" PREVIEW_HC="${PREVIEW_HC:-}" PREVIEW_LANG="${PREVIEW_LANG:-}" XDG_STATE_HOME="$work/state" XDG_DATA_HOME="$work/data" \
 QT_QPA_PLATFORM=offscreen timeout 60 quickshell -p "$work/config" 2>&1 \
   | grep -v -e "WAYLAND_DISPLAY" -e "QT_QPA_PLATFORM" -e "actually running" -e "--- WARNING" -e "window masks" || true
 

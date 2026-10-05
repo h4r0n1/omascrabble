@@ -2,6 +2,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import qs.Commons
+import "app/i18n/i18n.mjs" as I18n
 
 // Omarchy Scrabble — panel entry point.
 //
@@ -188,7 +189,7 @@ Item {
           Text {
             width: parent.width
             wrapMode: Text.WordWrap
-            text: "Le jeu n’a pas pu démarrer"
+            text: I18n.t(I18n.resolveLanguage(appLoader.item ? appLoader.item.saves.settings.language : "fr", Qt.locale().name), "boot.failed.title")
             color: Color.foreground
             font.family: Style.font.family
             font.pixelSize: Style.font.display
@@ -197,8 +198,7 @@ Item {
           Text {
             width: parent.width
             wrapMode: Text.WordWrap
-            text: "Une erreur empêche le chargement de l’interface. Le shell n’est pas affecté et votre partie sauvegardée est intacte. "
-              + "Une mise à jour d’Omarchy ou du plugin peut en être la cause : essayez « omarchy plugin update omascrabble »."
+            text: I18n.t(I18n.resolveLanguage(appLoader.item ? appLoader.item.saves.settings.language : "fr", Qt.locale().name), "boot.failed.text")
             color: Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.7)
             font.family: Style.font.family
             font.pixelSize: Style.font.body
@@ -219,7 +219,7 @@ Item {
             Text {
               id: retryLabel
               anchors.centerIn: parent
-              text: "Réessayer"
+              text: I18n.t(I18n.resolveLanguage(appLoader.item ? appLoader.item.saves.settings.language : "fr", Qt.locale().name), "common.retry")
               color: Color.background
               font.family: Style.font.family
               font.pixelSize: Style.font.body

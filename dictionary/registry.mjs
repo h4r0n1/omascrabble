@@ -12,27 +12,23 @@ import { ODS9DictionaryProvider, ODS9_ID } from "./ods9.mjs"
 export const DICTIONARIES = Object.freeze([
   Object.freeze({
     id: OPEN_FRENCH_ID,
-    label: "Français — Open Lexicon",
-    badge: "",
     language: "fr",
     tileset: "fr-classic",
     official: false,
     location: "bundled",
     file: "dictionary/data/open-fr.dawg",
     formsFile: "dictionary/data/open-fr.forms.dawg",
-    note: "Lexique libre dérivé de Grammalecte (MPL-2.0). Ce n’est pas l’ODS."
+    // label and note: interface catalogs, "dict.<id>.label" / ".note"
   }),
   Object.freeze({
     id: ODS9_ID,
-    label: "Français — ODS 9",
-    badge: "Officiel",
     language: "fr",
     tileset: "fr-classic",
     official: true,
     location: "user",
     file: "ods9.dawg",
     formsFile: "ods9.forms.dawg",
-    note: "liste sous licence de l’Officiel du Scrabble, non fournie."
+    // licensed, never bundled
   })
 ])
 

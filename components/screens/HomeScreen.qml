@@ -1,7 +1,6 @@
 import QtQuick
 import ".."
 import "../../app/format.mjs" as Format
-import "../../ai/difficulty.mjs" as Difficulty
 
 // Welcome: resume the saved game or start a new one.
 FocusScope {
@@ -21,20 +20,30 @@ FocusScope {
   readonly property bool canResume: !!saved && saved.status === "active"
   readonly property real tileSize: Math.max(30, Math.min(58, (width - 2 * theme.padding) / 11))
 
+  function tr(key, args) { return theme.t(key, args) }
+
+  // Same labelling rules as the controller (default names follow the
+  // interface language), for a saved game the controller hasn't loaded.
+  function nameOf(g, index) {
+    var p = g.players[index]
+    var defaults = ["", "Vous", "Ordinateur", "Ordinateur 1", "Ordinateur 2", "Joueur 1", "Joueur 2", "You", "Computer", "Computer 1", "Computer 2", "Player 1", "Player 2"]
+    if (defaults.indexOf(p.name) === -1) return p.name
+    if (p.kind === "ai") return g.players.filter(function(q) { return q.kind === "ai" }).length > 1 ? tr("player.computerN", { n: index + 1 }) : tr("player.computer")
+    return g.mode === "human_vs_human" ? tr("player.defaultName", { n: index + 1 }) : tr("player.you")
+  }
+
   function modeLabel(g) {
     if (!g) return ""
     if (g.mode === "human_vs_ai") {
       var ai = g.players.filter(function(p) { return p.kind === "ai" })[0]
-      return "Contre l’ordinateur" + (ai ? " · " + (Difficulty.DIFFICULTY_LABELS[ai.difficulty] || "") : "")
+      return tr("mode.human_vs_ai") + (ai ? " · " + tr("difficulty." + (ai.difficulty || "casual")) : "")
     }
-    if (g.mode === "human_vs_human") return "Deux joueurs locaux"
-    if (g.mode === "ai_vs_ai") return "Démonstration"
-    return "Entraînement"
+    return tr("mode." + g.mode)
   }
 
   function scoreLine(g) {
     if (!g) return ""
-    return g.players.map(function(p) { return p.name + "\u00a0: " + p.score }).join("   ·   ")
+    return g.players.map(function(p, i) { return home.nameOf(g, i) + tr("common.colon") + p.score }).join("   ·   ")
   }
 
   Keys.onReturnPressed: canResume ? resumeRequested() : newGameRequested()
@@ -110,7 +119,7 @@ FocusScope {
           width: parent.width - 2 * home.theme.padding
           spacing: home.theme.space
           Text {
-            text: "PARTIE EN COURS"
+            text: home.tr("home.inProgress")
             color: home.theme.muted
             font.family: home.theme.fontFamily
             font.pixelSize: home.theme.fontCaption
@@ -125,7 +134,7 @@ FocusScope {
             font.weight: Font.Bold
           }
           Text {
-            text: home.scoreLine(home.saved) + (home.saved ? "   ·   tour " + home.saved.turn + "   ·   " + home.saved.bag.length + " lettres dans le sac" : "")
+            text: home.scoreLine(home.saved) + (home.saved ? "   ·   " + home.tr("home.turn", { n: home.saved.turn }) + "   ·   " + home.tr("common.tilesInBag", { n: home.saved.bag.length }) : "")
             color: home.theme.muted
             font.family: home.theme.fontFamily
             font.pixelSize: home.theme.fontSmall
@@ -135,7 +144,7 @@ FocusScope {
           GameButton {
             theme: home.theme
             variant: "primary"
-            text: "REPRENDRE LA PARTIE"
+            text: home.tr("home.resume")
             icon: "play"
             onClicked: home.resumeRequested()
           }
@@ -149,15 +158,15 @@ FocusScope {
           anchors.horizontalCenter: parent.horizontalCenter
           theme: home.theme
           variant: home.canResume ? "secondary" : "primary"
-          text: "NOUVELLE PARTIE"
+          text: home.tr("home.newGame")
           icon: "plus"
           onClicked: home.newGameRequested()
         }
         Row {
           anchors.horizontalCenter: parent.horizontalCenter
           spacing: home.theme.space
-          GameButton { theme: home.theme; variant: "ghost"; text: "Statistiques"; icon: "stats"; onClicked: home.statsRequested() }
-          GameButton { theme: home.theme; variant: "ghost"; text: "Réglages"; icon: "settings"; onClicked: home.settingsRequested() }
+          GameButton { theme: home.theme; variant: "ghost"; text: home.tr("home.stats"); icon: "stats"; onClicked: home.statsRequested() }
+          GameButton { theme: home.theme; variant: "ghost"; text: home.tr("home.settings"); icon: "settings"; onClicked: home.settingsRequested() }
         }
       }
 
@@ -167,7 +176,7 @@ FocusScope {
         Text {
           anchors.horizontalCenter: parent.horizontalCenter
           text: home.dictionary && home.dictionary.provider
-            ? home.dictionary.provider.name() + "  ·  " + Format.formatInt(home.dictionary.provider.graph().wordCount) + " mots"
+            ? home.tr("dict." + home.dictionary.provider.id() + ".label") + "  ·  " + home.tr("home.words", { n: Format.formatInt(home.dictionary.provider.graph().wordCount) })
             : ""
           color: home.theme.muted
           font.family: home.theme.fontFamily
@@ -177,7 +186,7 @@ FocusScope {
           width: parent.width
           horizontalAlignment: Text.AlignHCenter
           wrapMode: Text.WordWrap
-          text: "Projet communautaire indépendant. SCRABBLE® est une marque de ses propriétaires respectifs ; ce jeu n’est ni affilié ni approuvé par eux."
+          text: home.tr("home.disclaimer")
           color: home.theme.alpha(home.theme.muted, 0.8)
           font.family: home.theme.fontFamily
           font.pixelSize: home.theme.fontCaption

@@ -40,7 +40,7 @@ Rectangle {
   }
 
   onScored: function(points, bingo) {
-    flyout.text = (points >= 0 ? "+" : "") + points + (bingo ? "  Scrabble !" : "")
+    flyout.text = (points >= 0 ? "+" : "") + points + (bingo ? "  " + theme.t("status.scrabble") : "")
     if (!theme.motionEnabled) return
     flyout.y = flyoutBase
     flyout.opacity = 0
@@ -177,5 +177,5 @@ Rectangle {
   }
 
   Accessible.role: Accessible.StaticText
-  Accessible.name: name + ", " + score + " points" + (active ? ", à son tour" : "")
+  Accessible.name: theme.t("a11y.player", { name: name, score: score, active: active })
 }

@@ -10,12 +10,13 @@ Dialog {
   property var definitions: null       // DefinitionsService
   property var forms: ({})             // tile word → accented spellings
   property var words: []               // tile words, main word first
+  property string gameLanguage: "fr"   // which definitions pack to read
   property string subtitle: ""
   property var results: ({})           // tile word → lookup result
 
   signal closed()
 
-  title: "Définitions"
+  title: theme.t("words.title")
   message: subtitle
   preferredWidth: 560
   onDismissed: closed()
@@ -58,7 +59,7 @@ Dialog {
         Text {
           width: parent.width
           wrapMode: Text.WordWrap
-          text: "Les définitions ne sont pas installées. Elles sont facultatives : une seule commande les télécharge (environ 700 Mo, une fois) et les prépare pour un usage hors ligne."
+          text: dlg.theme.t("words.notInstalled")
           color: dlg.theme.muted
           font.family: dlg.theme.fontFamily
           font.pixelSize: dlg.theme.fontBody
@@ -120,7 +121,7 @@ Dialog {
             visible: !!dlg.definitions && dlg.definitions.installed && !!result && result.entries.length === 0
             width: parent.width
             wrapMode: Text.WordWrap
-            text: "Pas de définition dans le Wiktionnaire pour ce mot."
+            text: dlg.theme.t("words.none")
             color: dlg.theme.muted
             font.family: dlg.theme.fontFamily
             font.pixelSize: dlg.theme.fontSmall
@@ -200,7 +201,7 @@ Dialog {
       anchors.verticalCenter: parent.verticalCenter
       width: parent.width - closeButton.width - 12
       wrapMode: Text.WordWrap
-      text: "Définitions : Wiktionnaire, CC BY-SA 4.0 (via Kaikki.org)"
+      text: dlg.theme.t(dlg.gameLanguage === "en" ? "words.credit.en" : "words.credit")
       color: dlg.theme.muted
       font.family: dlg.theme.fontFamily
       font.pixelSize: dlg.theme.fontCaption
@@ -209,7 +210,7 @@ Dialog {
       id: closeButton
       anchors.right: parent.right
       theme: dlg.theme
-      text: "Fermer"
+      text: dlg.theme.t("common.close")
       variant: "secondary"
       onClicked: dlg.closed()
     }

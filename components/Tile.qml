@@ -143,5 +143,5 @@ Item {
   }
 
   Accessible.role: Accessible.StaticText
-  Accessible.name: tile.joker ? "joker, lettre " + tile.letter : "lettre " + tile.letter + ", " + tile.points + (tile.points > 1 ? " points" : " point")
+  Accessible.name: tile.joker ? tile.theme.t("a11y.jokerLetter", { letter: tile.letter }) : tile.theme.t("a11y.letter", { letter: tile.letter, points: tile.points })
 }

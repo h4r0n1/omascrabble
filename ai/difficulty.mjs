@@ -5,12 +5,7 @@
 
 export const DIFFICULTIES = Object.freeze(["beginner", "casual", "expert", "champion"])
 
-export const DIFFICULTY_LABELS = Object.freeze({
-  beginner: "Débutant",
-  casual: "Casual",
-  expert: "Expert",
-  champion: "Champion"
-})
+// Labels: interface catalogs, "difficulty.<id>".
 
 const PROFILES = {
   // Small vocabulary, short words, no strategy, regular slips.
@@ -91,9 +86,9 @@ const PROFILES = {
 
 // Personalities tilt the judgement without changing the strength much.
 export const PERSONALITIES = Object.freeze({
-  balanced: { label: "Équilibré", leave: 1, defense: 1, premium: 1 },
-  aggressive: { label: "Offensif", leave: 0.7, defense: 0.5, premium: 1.4 },
-  cautious: { label: "Prudent", leave: 1.2, defense: 1.6, premium: 0.8 }
+  balanced: { leave: 1, defense: 1, premium: 1 },     // labels: "personality.<id>"
+  aggressive: { leave: 0.7, defense: 0.5, premium: 1.4 },
+  cautious: { leave: 1.2, defense: 1.6, premium: 0.8 }
 })
 
 // thinkingScale stretches the time the AI takes (the "thinking time"

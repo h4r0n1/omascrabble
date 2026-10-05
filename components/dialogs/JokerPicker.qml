@@ -9,8 +9,8 @@ Dialog {
   signal chosen(string letter)
   signal cancelled()
 
-  title: "Lettre du joker"
-  message: "Le joker vaut 0 point et garde sa couleur sur le plateau. Tapez une lettre ou cliquez-la."
+  title: theme.t("joker.title")
+  message: theme.t("joker.message")
   preferredWidth: 420
   onDismissed: cancelled()
   onOpenChanged: if (open) chosenIndex = 4
@@ -61,6 +61,6 @@ Dialog {
 
   Row {
     anchors.right: parent.right
-    GameButton { theme: picker.theme; text: "Annuler"; variant: "ghost"; onClicked: picker.cancelled() }
+    GameButton { theme: picker.theme; text: picker.theme.t("common.cancel"); variant: "ghost"; onClicked: picker.cancelled() }
   }
 }

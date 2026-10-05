@@ -80,7 +80,7 @@ export function createGame(options) {
     bag: tiles.map(function(t) { return t.id }),
     players: playerSpecs.map(function(p, i) {
       return {
-        name: typeof p.name === "string" && p.name ? p.name.slice(0, 40) : "Joueur " + (i + 1),
+        name: typeof p.name === "string" ? p.name.slice(0, 40) : "",   // "" = default, labelled by the UI
         kind: p.kind === "ai" ? "ai" : "human",
         difficulty: p.kind === "ai" && typeof p.difficulty === "string" ? p.difficulty : null,
         score: 0,

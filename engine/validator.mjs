@@ -18,6 +18,7 @@ import { Board, inBounds, cellIndex, effectiveLetter, CENTER_ROW, CENTER_COL } f
 import { scoreMove } from "./scoring.mjs"
 import { REASON, messageFor } from "./reasons.mjs"
 import { positionLabel, wordNotation } from "./notation.mjs"
+import { getTileset } from "./tileset.mjs"
 
 const LETTER_RE = /^[A-Z]$/
 
@@ -61,6 +62,10 @@ function runThrough(board, row, col, dir, newCells) {
     r += dr; c += dc
   }
   return cells
+}
+
+function notationStyle(rules) {
+  try { return getTileset(rules.tileset).language } catch (e) { return "fr" }
 }
 
 export function validateMove(input) {
@@ -185,7 +190,7 @@ export function validateMove(input) {
       return { tileId: p.tile.id, row: p.row, col: p.col, letter: effectiveLetter(p.tile), isJoker: p.tile.isJoker, points: p.tile.points }
     }),
     direction: direction,
-    position: positionLabel(direction, start.row, start.col),
+    position: positionLabel(direction, start.row, start.col, notationStyle(rules)),
     mainWord: wordDetails[0].word
   }
 

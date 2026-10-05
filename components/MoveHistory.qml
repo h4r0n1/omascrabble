@@ -104,7 +104,7 @@ Item {
     Text {
       visible: list.count === 0
       anchors.centerIn: parent
-      text: "Aucun coup joué"
+      text: history.theme.t("history.empty")
       color: history.theme.muted
       font.family: history.theme.fontFamily
       font.pixelSize: history.theme.fontSmall

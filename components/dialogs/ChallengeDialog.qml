@@ -14,17 +14,15 @@ Dialog {
 
   property int viewer: 0
   readonly property bool youChallenged: !!outcome && outcome.challenger === viewer
-  readonly property bool computerChallenged: !!outcome && outcome.challengerName === "Ordinateur"
+  property var controller: null
+  readonly property bool computerChallenged: !!outcome && !!controller && !!controller.game && controller.game.players[outcome.challenger].kind === "ai" && controller.game.mode !== "ai_vs_ai"
 
   title: !outcome ? ""
-    : computerChallenged ? (outcome.success ? "L’ordinateur conteste votre coup" : "L’ordinateur conteste… à tort")
-    : outcome.success ? "Contestation réussie" : "Contestation refusée"
+    : theme.t(computerChallenged ? (outcome.success ? "challenge.byComputer.success" : "challenge.byComputer.failure")
+                                 : (outcome.success ? "challenge.success" : "challenge.failure"))
   message: !outcome ? ""
-    : computerChallenged
-      ? (outcome.success ? "Votre coup est annulé : vos lettres reviennent sur votre chevalet et aucun point n’est marqué."
-                         : "Tous vos mots sont valides : votre coup est maintenu." + penaltyText())
-      : outcome.success ? "Le coup est annulé : ses lettres retournent sur le chevalet de son auteur et aucun point n’est marqué."
-                        : "Tous les mots sont valides : le coup est maintenu." + penaltyText()
+    : theme.t((computerChallenged ? "challenge.byComputer." : "challenge.") + (outcome.success ? "success" : "failure") + ".message")
+      + (outcome.success ? "" : penaltyText())
   preferredWidth: 460
   onDismissed: closed()
   Keys.onReturnPressed: closed()
@@ -32,15 +30,17 @@ Dialog {
 
   function penaltyText() {
     if (!outcome || !outcome.penalty) return ""
-    var who = computerChallenged ? "L’ordinateur" : youChallenged ? "Vous" : outcome.challengerName
-    if (outcome.penalty.type === "points") return " " + who + (who === "Vous" ? " perdez " : " perd ") + outcome.penalty.points + " points."
-    if (outcome.penalty.type === "lose_turn") return " " + who + (who === "Vous" ? " passez votre tour." : " passe son tour.")
+    var args = { you: youChallenged && !computerChallenged, n: outcome.penalty.points,
+                 who: computerChallenged ? theme.t("player.computerSubject") : (controller ? controller.playerLabel(outcome.challenger) : "") }
+    if (outcome.penalty.type === "points") return theme.t("challenge.penalty.points", args)
+    if (outcome.penalty.type === "lose_turn") return theme.t("challenge.penalty.loseTurn", args)
     return ""
   }
 
+
   Text {
     width: parent.width
-    text: "Mots vérifiés · " + dlg.dictionaryName
+    text: dlg.theme.t("challenge.checked", { dictionary: dlg.dictionaryName })
     color: dlg.theme.muted
     font.family: dlg.theme.fontFamily
     font.pixelSize: dlg.theme.fontSmall
@@ -83,7 +83,7 @@ Dialog {
           }
           Text {
             readonly property var spellings: dlg.forms[modelData.word] || []
-            text: modelData.valid ? (spellings.length ? spellings.join(", ") : "") : "absent du dictionnaire"
+            text: modelData.valid ? (spellings.length ? spellings.join(", ") : "") : dlg.theme.t("challenge.notInDictionary")
             color: dlg.theme.muted
             font.family: dlg.theme.fontFamily
             font.pixelSize: dlg.theme.fontBody
@@ -97,6 +97,6 @@ Dialog {
 
   Row {
     anchors.right: parent.right
-    GameButton { theme: dlg.theme; text: "Continuer"; variant: "primary"; onClicked: dlg.closed() }
+    GameButton { theme: dlg.theme; text: dlg.theme.t("common.continue"); variant: "primary"; onClicked: dlg.closed() }
   }
 }

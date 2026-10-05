@@ -1,5 +1,6 @@
 import QtQuick
 import qs.Commons
+import "../app/i18n/i18n.mjs" as I18n
 
 // The game's palette and metrics, derived from the active Omarchy theme.
 //
@@ -11,6 +12,12 @@ import qs.Commons
 // physical object — so letters read the same in every mode.
 QtObject {
   id: theme
+
+  // Presentation context: palette, metrics and the interface language.
+  // Every component already receives the theme, so translations ride along:
+  // theme.t("key", { … }). Bindings re-evaluate when `language` changes.
+  property string language: "fr"
+  function t(key, args) { return I18n.t(theme.language, key, args) }
 
   property string appearance: "omarchy"
   property bool systemPrefersDark: true
@@ -92,24 +99,14 @@ QtObject {
     var c = premiumColor(type)
     return lum(c) > 0.5 ? alpha("#1c1813", 0.78) : alpha("#ffffff", 0.88)
   }
-  // Colour-independent labels (French): Mot Triple, Mot Double, Lettre
-  // Triple, Lettre Double, and the star.
+  // Colour-independent labels: MT/MD/LT/LD in French, TW/DW/TL/DL in
+  // English, and the star.
   function premiumLabel(type) {
-    if (type === "TRIPLE_WORD") return "MT"
-    if (type === "DOUBLE_WORD") return "MD"
-    if (type === "TRIPLE_LETTER") return "LT"
-    if (type === "DOUBLE_LETTER") return "LD"
     if (type === "CENTER") return "★"
-    return ""
+    if (type === "NONE" || !type) return ""
+    return t("premium." + type)
   }
-  function premiumName(type) {
-    if (type === "TRIPLE_WORD") return "mot compte triple"
-    if (type === "DOUBLE_WORD") return "mot compte double"
-    if (type === "TRIPLE_LETTER") return "lettre compte triple"
-    if (type === "DOUBLE_LETTER") return "lettre compte double"
-    if (type === "CENTER") return "étoile centrale, mot compte double"
-    return "case simple"
-  }
+  function premiumName(type) { return t("premium.name." + (type || "NONE")) }
 
   // ------------------------------------------------------------- the tiles
   readonly property color tileTop: highContrast ? "#ffffff" : dark ? "#ecdfc4" : "#f8efdc"

@@ -64,7 +64,7 @@ Item {
     Text {
       visible: rack.hidden
       anchors.centerIn: parent
-      text: "Chevalet masqué"
+      text: rack.theme.t("rack.hidden")
       color: rack.theme.muted
       font.family: rack.theme.fontFamily
       font.pixelSize: rack.theme.fontBody
@@ -148,5 +148,5 @@ Item {
   }
 
   Accessible.role: Accessible.List
-  Accessible.name: "Chevalet : " + tiles.map(function(t) { return t.isJoker ? "joker" : t.letter }).join(", ")
+  Accessible.name: theme.t("a11y.rack", { tiles: tiles.map(function(t) { return t.isJoker ? theme.t("a11y.joker") : t.letter }).join(", ") })
 }

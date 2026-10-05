@@ -139,7 +139,7 @@ Item {
       } catch (e) { savedExtras = ({}) }
     } else {
       savedGame = null
-      quarantine(gamePath, "partie", result)
+      quarantine(gamePath, "game", result)
     }
     gameChecked = true
   }
@@ -150,7 +150,7 @@ Item {
       try {
         settings = SettingsModel.normalizeSettings(JSON.parse(raw))
       } catch (e) {
-        quarantine(settingsPath, "réglages", { error: "MALFORMED_JSON", message: "Les réglages étaient illisibles et ont été réinitialisés." })
+        quarantine(settingsPath, "settings", { error: "MALFORMED_JSON" })
       }
     }
     settingsChecked = true
@@ -162,7 +162,7 @@ Item {
       try {
         stats = Stats.normalizeStats(JSON.parse(raw))
       } catch (e) {
-        quarantine(statsPath, "statistiques", { error: "MALFORMED_JSON", message: "Les statistiques étaient illisibles." })
+        quarantine(statsPath, "stats", { error: "MALFORMED_JSON" })
       }
     }
     statsChecked = true

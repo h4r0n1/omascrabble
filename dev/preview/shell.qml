@@ -215,8 +215,9 @@ ShellRoot {
     onTriggered: {
       var c = app.controller
       if (rootShell.step === 0) {
-        if (rootShell.appearance !== "" || Quickshell.env("PREVIEW_HC") === "1")
+        if (rootShell.appearance !== "" || Quickshell.env("PREVIEW_HC") === "1" || Quickshell.env("PREVIEW_LANG") !== "")
           app.saves.saveSettings(Object.assign({}, app.saves.settings, {
+            language: Quickshell.env("PREVIEW_LANG") || app.saves.settings.language,
             appearance: rootShell.appearance || app.saves.settings.appearance,
             accessibility: Object.assign({}, app.saves.settings.accessibility, { highContrast: Quickshell.env("PREVIEW_HC") === "1" })
           }))

@@ -20,23 +20,12 @@ export const DEFAULT_SHORTCUTS = Object.freeze({
   help: "F1"
 })
 
-export const SHORTCUT_LABELS = Object.freeze({
-  confirm: "Jouer le coup",
-  cancel: "Annuler le coup",
-  select: "Prendre / poser un jeton",
-  shuffle: "Mélanger le chevalet",
-  pass: "Passer",
-  exchange: "Échanger",
-  challenge: "Contester le coup",
-  newGame: "Nouvelle partie",
-  save: "Sauvegarder",
-  hint: "Indice (entraînement)",
-  history: "Historique des coups",
-  help: "Aide des raccourcis"
-})
+// Labels live in the interface catalogs as "shortcut.<action>".
+export const SHORTCUT_ACTIONS = Object.freeze(Object.keys(DEFAULT_SHORTCUTS))
 
 export const DEFAULT_SETTINGS = Object.freeze({
   version: SETTINGS_VERSION,
+  language: "fr",            // fr | en | auto (system locale) — interface only
   appearance: "omarchy",      // omarchy | light | dark | system
   animation: "auto",          // auto | full | reduced | off
   gameplay: Object.freeze({
@@ -64,6 +53,7 @@ export const DEFAULT_SETTINGS = Object.freeze({
     mode: "human_vs_ai",
     timeMinutes: 20,
     dictionary: "open-fr",
+    gameLanguage: "fr",
     validation: "immediate",
     challengePenalty: "none",
     firstPlayer: "human",
@@ -73,6 +63,7 @@ export const DEFAULT_SETTINGS = Object.freeze({
 })
 
 const ENUMS = {
+  language: ["fr", "en", "auto"],
   appearance: ["omarchy", "light", "dark", "system"],
   animation: ["auto", "full", "reduced", "off"],
   difficulty: ["beginner", "casual", "expert", "champion"],
@@ -117,6 +108,7 @@ export function normalizeSettings(input) {
   const scale = Number(ai.thinkingScale)
   return {
     version: SETTINGS_VERSION,
+    language: pick(src.language, ENUMS.language, d.language),
     appearance: pick(src.appearance, ENUMS.appearance, d.appearance),
     animation: pick(src.animation, ENUMS.animation, d.animation),
     gameplay: {
@@ -144,6 +136,7 @@ export function normalizeSettings(input) {
       mode: pick(n.mode, ENUMS.mode, d.newGame.mode),
       timeMinutes: TIME_CHOICES.indexOf(n.timeMinutes) !== -1 ? n.timeMinutes : d.newGame.timeMinutes,
       dictionary: typeof n.dictionary === "string" && /^[a-z0-9-]{1,32}$/.test(n.dictionary) ? n.dictionary : d.newGame.dictionary,
+      gameLanguage: pick(n.gameLanguage, ["fr", "en"], d.newGame.gameLanguage),
       validation: pick(n.validation, ENUMS.validation, d.newGame.validation),
       challengePenalty: pick(n.challengePenalty, ENUMS.challengePenalty, d.newGame.challengePenalty),
       firstPlayer: pick(n.firstPlayer, ENUMS.firstPlayer, d.newGame.firstPlayer),
@@ -224,7 +217,13 @@ export function shortcutFromEvent(event, keys) {
   return isValidShortcut(text) ? text : ""
 }
 
-export function shortcutLabel(shortcut) {
-  const names = { Return: "Entrée", Escape: "Échap", Space: "Espace", Backspace: "Retour", Delete: "Suppr", Ctrl: "Ctrl", Shift: "Maj", Alt: "Alt", Slash: "/", Question: "?" }
-  return String(shortcut || "").split("+").map(function(p) { return names[p] || p }).join(" + ")
+// `tr(key)` translates key names (key.Return…); defaults to French.
+export function shortcutLabel(shortcut, tr) {
+  const fr = { Return: "Entrée", Escape: "Échap", Space: "Espace", Backspace: "Retour", Delete: "Suppr", Shift: "Maj" }
+  const fixed = { Ctrl: "Ctrl", Alt: "Alt", Slash: "/", Question: "?" }
+  return String(shortcut || "").split("+").map(function(p) {
+    if (fixed[p]) return fixed[p]
+    if (fr[p]) return tr ? tr("key." + p) : fr[p]
+    return p
+  }).join(" + ")
 }

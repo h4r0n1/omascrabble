@@ -19,6 +19,7 @@ FocusScope {
 
   readonly property var s: saves ? saves.settings : SettingsModel.normalizeSettings({})
 
+  function tr(key, args) { return theme.t(key, args) }
   function set(path, value) { saves.saveSettings(SettingsModel.withSetting(s, path, value)) }
 
   onVisibleChanged: if (visible) {
@@ -66,9 +67,9 @@ FocusScope {
 
       Row {
         spacing: page.theme.space
-        GameButton { theme: page.theme; icon: "back"; variant: "ghost"; focusable: false; tooltip: "Retour"; onClicked: page.closed(); anchors.verticalCenter: parent.verticalCenter }
+        GameButton { theme: page.theme; icon: "back"; variant: "ghost"; focusable: false; tooltip: page.tr("common.back"); onClicked: page.closed(); anchors.verticalCenter: parent.verticalCenter }
         Text {
-          text: "Réglages"
+          text: page.tr("settings.title")
           color: page.theme.foreground
           font.family: page.theme.fontFamily
           font.pixelSize: page.theme.fontDisplay
@@ -77,104 +78,118 @@ FocusScope {
         }
       }
 
-      SectionTitle { width: parent.width; theme: page.theme; text: "Apparence" }
+      SectionTitle { width: parent.width; theme: page.theme; text: page.tr("settings.language") }
       ChoiceGroup {
         id: firstControl
         width: parent.width
         theme: page.theme
+        title: page.tr("settings.language.interface")
+        value: page.s.language
+        options: [
+          { value: "fr", label: page.tr("settings.language.fr") },
+          { value: "en", label: page.tr("settings.language.en") },
+          { value: "auto", label: page.tr("settings.language.auto"), detail: page.tr("settings.language.auto.detail") }
+        ]
+        onPicked: function(v) { page.set("language", v) }
+      }
+
+      SectionTitle { width: parent.width; theme: page.theme; text: page.tr("settings.appearance") }
+      ChoiceGroup {
+        width: parent.width
+        theme: page.theme
         value: page.s.appearance
         options: [
-          { value: "omarchy", label: "Suivre le thème Omarchy", detail: "Couleurs, police et arrondis du thème actif." },
-          { value: "light", label: "Clair", detail: "Palette chaude et claire, quel que soit le thème." },
-          { value: "dark", label: "Sombre", detail: "Palette chaude et sombre, quel que soit le thème." },
-          { value: "system", label: "Système", detail: "Clair ou sombre selon la préférence du bureau." }
+          { value: "omarchy", label: page.tr("settings.appearance.omarchy"), detail: page.tr("settings.appearance.omarchy.detail") },
+          { value: "light", label: page.tr("settings.appearance.light"), detail: page.tr("settings.appearance.light.detail") },
+          { value: "dark", label: page.tr("settings.appearance.dark"), detail: page.tr("settings.appearance.dark.detail") },
+          { value: "system", label: page.tr("settings.appearance.system"), detail: page.tr("settings.appearance.system.detail") }
         ]
         onPicked: function(v) { page.set("appearance", v) }
       }
 
-      SectionTitle { width: parent.width; theme: page.theme; text: "Animations" }
+      SectionTitle { width: parent.width; theme: page.theme; text: page.tr("settings.animation") }
       ChoiceGroup {
         width: parent.width
         theme: page.theme
         inline: true
         value: page.s.animation
         options: [
-          { value: "auto", label: "Automatique" }, { value: "full", label: "Complètes" },
-          { value: "reduced", label: "Réduites" }, { value: "off", label: "Désactivées" }
+          { value: "auto", label: page.tr("settings.animation.auto") }, { value: "full", label: page.tr("settings.animation.full") },
+          { value: "reduced", label: page.tr("settings.animation.reduced") }, { value: "off", label: page.tr("settings.animation.off") }
         ]
         onPicked: function(v) { page.set("animation", v) }
       }
       Text {
         width: parent.width
         wrapMode: Text.WordWrap
-        text: "« Automatique » réduit les animations quand le bureau demande moins de mouvement (préférence « enable-animations »)."
+        text: page.tr("settings.animation.note")
         color: page.theme.muted
         font.family: page.theme.fontFamily
         font.pixelSize: page.theme.fontSmall
       }
 
-      SectionTitle { width: parent.width; theme: page.theme; text: "Jeu" }
+      SectionTitle { width: parent.width; theme: page.theme; text: page.tr("settings.gameplay") }
       Column {
         width: parent.width
         spacing: 2
-        ToggleRow { width: parent.width; theme: page.theme; label: "Confirmer avant de jouer"; detail: "Affiche le récapitulatif du coup avant de le valider."; checked: page.s.gameplay.confirmMoves; onToggled: function(v) { page.set("gameplay.confirmMoves", v) } }
-        ToggleRow { width: parent.width; theme: page.theme; label: "Placement assisté"; detail: "Sur le plateau, taper une lettre pose le jeton et avance ; le joker est utilisé si la lettre manque."; checked: page.s.gameplay.assistedPlacement; onToggled: function(v) { page.set("gameplay.assistedPlacement", v) } }
-        ToggleRow { width: parent.width; theme: page.theme; label: "Aperçu du score"; checked: page.s.gameplay.showScorePreview; onToggled: function(v) { page.set("gameplay.showScorePreview", v) } }
-        ToggleRow { width: parent.width; theme: page.theme; label: "Signaler les mots invalides"; detail: "Pendant que vous posez vos lettres (jamais en mode contestation)."; checked: page.s.gameplay.showWordValidation; onToggled: function(v) { page.set("gameplay.showWordValidation", v) } }
-        ToggleRow { width: parent.width; theme: page.theme; label: "Coordonnées du plateau"; checked: page.s.gameplay.showCoordinates; onToggled: function(v) { page.set("gameplay.showCoordinates", v) } }
-        ToggleRow { width: parent.width; theme: page.theme; label: "Sons"; detail: "Discrets ; désactivés par défaut."; checked: page.s.gameplay.sounds; onToggled: function(v) { page.set("gameplay.sounds", v) } }
-        ToggleRow { width: parent.width; theme: page.theme; label: "Masquer le chevalet entre deux joueurs"; checked: page.s.gameplay.hideRackBetweenTurns; onToggled: function(v) { page.set("gameplay.hideRackBetweenTurns", v) } }
-        ToggleRow { width: parent.width; theme: page.theme; label: "Arrêter la pendule quand la fenêtre est masquée"; checked: page.s.gameplay.pauseClockWhenHidden; onToggled: function(v) { page.set("gameplay.pauseClockWhenHidden", v) } }
+        ToggleRow { width: parent.width; theme: page.theme; label: page.tr("settings.confirmMoves"); detail: page.tr("settings.confirmMoves.detail"); checked: page.s.gameplay.confirmMoves; onToggled: function(v) { page.set("gameplay.confirmMoves", v) } }
+        ToggleRow { width: parent.width; theme: page.theme; label: page.tr("settings.assisted"); detail: page.tr("settings.assisted.detail"); checked: page.s.gameplay.assistedPlacement; onToggled: function(v) { page.set("gameplay.assistedPlacement", v) } }
+        ToggleRow { width: parent.width; theme: page.theme; label: page.tr("settings.scorePreview"); checked: page.s.gameplay.showScorePreview; onToggled: function(v) { page.set("gameplay.showScorePreview", v) } }
+        ToggleRow { width: parent.width; theme: page.theme; label: page.tr("settings.wordValidation"); detail: page.tr("settings.wordValidation.detail"); checked: page.s.gameplay.showWordValidation; onToggled: function(v) { page.set("gameplay.showWordValidation", v) } }
+        ToggleRow { width: parent.width; theme: page.theme; label: page.tr("settings.coordinates"); checked: page.s.gameplay.showCoordinates; onToggled: function(v) { page.set("gameplay.showCoordinates", v) } }
+        ToggleRow { width: parent.width; theme: page.theme; label: page.tr("settings.sounds"); detail: page.tr("settings.sounds.detail"); checked: page.s.gameplay.sounds; onToggled: function(v) { page.set("gameplay.sounds", v) } }
+        ToggleRow { width: parent.width; theme: page.theme; label: page.tr("settings.hideRack"); checked: page.s.gameplay.hideRackBetweenTurns; onToggled: function(v) { page.set("gameplay.hideRackBetweenTurns", v) } }
+        ToggleRow { width: parent.width; theme: page.theme; label: page.tr("settings.pauseClock"); checked: page.s.gameplay.pauseClockWhenHidden; onToggled: function(v) { page.set("gameplay.pauseClockWhenHidden", v) } }
       }
 
-      SectionTitle { width: parent.width; theme: page.theme; text: "Ordinateur" }
+      SectionTitle { width: parent.width; theme: page.theme; text: page.tr("settings.computer") }
       ChoiceGroup {
         width: parent.width
         theme: page.theme
-        title: "Difficulté par défaut"
+        title: page.tr("settings.defaultDifficulty")
         inline: true
         value: page.s.ai.difficulty
-        options: Difficulty.DIFFICULTIES.map(function(d) { return { value: d, label: Difficulty.DIFFICULTY_LABELS[d] } })
+        options: Difficulty.DIFFICULTIES.map(function(d) { return { value: d, label: page.tr("difficulty." + d) } })
         onPicked: function(v) { page.set("ai.difficulty", v) }
       }
       ChoiceGroup {
         width: parent.width
         theme: page.theme
-        title: "Temps de réflexion"
+        title: page.tr("settings.thinking")
         inline: true
         value: page.s.ai.thinkingScale
-        options: [{ value: 0.5, label: "Rapide" }, { value: 1, label: "Normal" }, { value: 2, label: "Posé" }]
+        options: [{ value: 0.5, label: page.tr("settings.thinking.fast") }, { value: 1, label: page.tr("settings.thinking.normal") }, { value: 2, label: page.tr("settings.thinking.slow") }]
         onPicked: function(v) { page.set("ai.thinkingScale", v) }
       }
       ChoiceGroup {
         width: parent.width
         theme: page.theme
-        title: "Personnalité"
+        title: page.tr("settings.personality")
         value: page.s.ai.personality
         options: [
-          { value: "balanced", label: Difficulty.PERSONALITIES.balanced.label, detail: "Score, chevalet et défense en équilibre." },
-          { value: "aggressive", label: Difficulty.PERSONALITIES.aggressive.label, detail: "Vise les gros coups et les cases chères, ouvre volontiers le jeu." },
-          { value: "cautious", label: Difficulty.PERSONALITIES.cautious.label, detail: "Ferme les cases mot triple et soigne son chevalet." }
+          { value: "balanced", label: page.tr("personality.balanced"), detail: page.tr("settings.personality.balanced.detail") },
+          { value: "aggressive", label: page.tr("personality.aggressive"), detail: page.tr("settings.personality.aggressive.detail") },
+          { value: "cautious", label: page.tr("personality.cautious"), detail: page.tr("settings.personality.cautious.detail") }
         ]
         onPicked: function(v) { page.set("ai.personality", v) }
       }
 
-      SectionTitle { width: parent.width; theme: page.theme; text: "Accessibilité" }
+      SectionTitle { width: parent.width; theme: page.theme; text: page.tr("settings.accessibility") }
       Column {
         width: parent.width
         spacing: 2
-        ToggleRow { width: parent.width; theme: page.theme; label: "Contraste élevé"; checked: page.s.accessibility.highContrast; onToggled: function(v) { page.set("accessibility.highContrast", v) } }
-        ToggleRow { width: parent.width; theme: page.theme; label: "Jetons plus grands"; checked: page.s.accessibility.largerTiles; onToggled: function(v) { page.set("accessibility.largerTiles", v) } }
-        ToggleRow { width: parent.width; theme: page.theme; label: "Texte plus grand"; checked: page.s.accessibility.largerText; onToggled: function(v) { page.set("accessibility.largerText", v) } }
-        ToggleRow { width: parent.width; theme: page.theme; label: "Cases spéciales lisibles sans couleur"; detail: "Affiche MT, MD, LT, LD et ★ sur les cases."; checked: page.s.accessibility.premiumLabels; onToggled: function(v) { page.set("accessibility.premiumLabels", v) } }
+        ToggleRow { width: parent.width; theme: page.theme; label: page.tr("settings.highContrast"); checked: page.s.accessibility.highContrast; onToggled: function(v) { page.set("accessibility.highContrast", v) } }
+        ToggleRow { width: parent.width; theme: page.theme; label: page.tr("settings.largerTiles"); checked: page.s.accessibility.largerTiles; onToggled: function(v) { page.set("accessibility.largerTiles", v) } }
+        ToggleRow { width: parent.width; theme: page.theme; label: page.tr("settings.largerText"); checked: page.s.accessibility.largerText; onToggled: function(v) { page.set("accessibility.largerText", v) } }
+        ToggleRow { width: parent.width; theme: page.theme; label: page.tr("settings.premiumLabels"); detail: page.tr("settings.premiumLabels.detail"); checked: page.s.accessibility.premiumLabels; onToggled: function(v) { page.set("accessibility.premiumLabels", v) } }
       }
 
-      SectionTitle { width: parent.width; theme: page.theme; text: "Raccourcis clavier" }
+      SectionTitle { width: parent.width; theme: page.theme; text: page.tr("settings.shortcuts") }
       Column {
         width: parent.width
         spacing: 2
         Repeater {
-          model: Object.keys(SettingsModel.SHORTCUT_LABELS)
+          model: SettingsModel.SHORTCUT_ACTIONS
           Item {
             required property var modelData
             width: body.width
@@ -182,7 +197,7 @@ FocusScope {
             Text {
               anchors.verticalCenter: parent.verticalCenter
               x: 6
-              text: SettingsModel.SHORTCUT_LABELS[modelData]
+              text: page.tr("shortcut." + modelData)
               color: page.theme.foreground
               font.family: page.theme.fontFamily
               font.pixelSize: page.theme.fontBody
@@ -194,28 +209,28 @@ FocusScope {
               KeyCap {
                 theme: page.theme
                 anchors.verticalCenter: parent.verticalCenter
-                text: page.rebinding === modelData ? "Appuyez sur une touche…" : SettingsModel.shortcutLabel(page.s.shortcuts[modelData])
+                text: page.rebinding === modelData ? page.tr("settings.pressKey") : SettingsModel.shortcutLabel(page.s.shortcuts[modelData], page.tr)
                 color: page.rebinding === modelData ? page.theme.alpha(page.theme.accent, 0.18) : page.theme.panelStrong
               }
-              GameButton { theme: page.theme; compact: true; variant: "ghost"; text: "Modifier"; onClicked: { page.rebinding = modelData; page.forceActiveFocus() } }
+              GameButton { theme: page.theme; compact: true; variant: "ghost"; text: page.tr("common.edit"); onClicked: { page.rebinding = modelData; page.forceActiveFocus() } }
             }
           }
         }
         Row {
           spacing: page.theme.space
-          GameButton { theme: page.theme; compact: true; variant: "ghost"; text: "Rétablir les raccourcis par défaut"; onClicked: page.set("shortcuts", SettingsModel.DEFAULT_SHORTCUTS) }
+          GameButton { theme: page.theme; compact: true; variant: "ghost"; text: page.tr("settings.resetShortcuts"); onClicked: page.set("shortcuts", SettingsModel.DEFAULT_SHORTCUTS) }
         }
         Text {
           width: parent.width
           wrapMode: Text.WordWrap
-          text: "Les raccourcis d’Omarchy et d’Hyprland (touche Super) restent prioritaires : le jeu ne reçoit que les touches de sa fenêtre."
+          text: page.tr("settings.shortcutsNote")
           color: page.theme.muted
           font.family: page.theme.fontFamily
           font.pixelSize: page.theme.fontSmall
         }
       }
 
-      SectionTitle { id: about; width: parent.width; theme: page.theme; text: "Dictionnaire et licences" }
+      SectionTitle { id: about; width: parent.width; theme: page.theme; text: page.tr("settings.about") }
       Column {
         width: parent.width
         spacing: page.theme.space
@@ -229,9 +244,9 @@ FocusScope {
           font.family: page.theme.fontFamily
           font.pixelSize: page.theme.fontBody
           text: parent.p
-            ? parent.p.name() + (parent.p.isOfficial() ? " — officiel" : "") + "\n"
-              + Format.formatInt(parent.p.graph().wordCount) + " mots jouables · version " + parent.p.version()
-            : "Dictionnaire non chargé."
+            ? page.tr("settings.about.loaded", { name: page.tr("dict." + parent.p.id() + ".label"), official: parent.p.isOfficial() ? page.tr("settings.about.official") : "",
+                                               n: Format.formatInt(parent.p.graph().wordCount), version: parent.p.version() })
+            : page.tr("settings.about.notLoaded")
         }
         Text {
           width: parent.width
@@ -240,10 +255,7 @@ FocusScope {
           color: page.theme.muted
           font.family: page.theme.fontFamily
           font.pixelSize: page.theme.fontSmall
-          text: "Le lexique ouvert est dérivé du « Lexique des formes fléchies du français » de Grammalecte (Olivier R., Dicollecte), version 7.7, publié sous licence Mozilla Public License 2.0. Il n’est pas l’Officiel du Scrabble (ODS) : certains mots acceptés par l’ODS en sont absents, et inversement. "
-            + "Les accents et les ligatures (é, ç, œ…) se jouent sans accent ; une entrée contenant tout autre caractère (tiret, apostrophe, ñ…) est écartée, jamais tronquée.\n\n"
-            + "L’ODS 9, référence officielle 2024–2027, est sous licence et n’est pas fourni. Avec une licence, sa liste peut être compilée par tools/build-dictionary.mjs dans ~/.local/share/omascrabble/dictionaries/ods9.dawg ; il apparaîtra alors dans « Nouvelle partie ».\n\n"
-            + "Jeu : licence MIT. Projet communautaire indépendant ; SCRABBLE® est une marque de ses propriétaires respectifs, sans lien avec ce projet."
+          text: page.tr("settings.about.text")
         }
       }
     }

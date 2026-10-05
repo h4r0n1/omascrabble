@@ -48,7 +48,7 @@ Item {
       id: recall
       theme: controls.theme; icon: "recall"; variant: "ghost"; focusable: false
       enabled: controls.hasPending
-      tooltip: "Rappeler les lettres"; shortcutHint: controls.label("cancel")
+      tooltip: controls.theme.t("controls.recall"); shortcutHint: controls.label("cancel")
       keyboardFocus: controls.buttons[controls.focusIndex] === recall
       onClicked: controls.recallRequested()
     }
@@ -56,7 +56,7 @@ Item {
       id: shuffle
       theme: controls.theme; icon: "shuffle"; variant: "ghost"; focusable: false
       enabled: controls.controller && controls.controller.isActive && controls.controller.game.players[controls.controller.viewer].kind === "human"
-      tooltip: "Mélanger le chevalet"; shortcutHint: controls.label("shuffle")
+      tooltip: controls.theme.t("controls.shuffle"); shortcutHint: controls.label("shuffle")
       keyboardFocus: controls.buttons[controls.focusIndex] === shuffle
       onClicked: controls.shuffleRequested()
     }
@@ -65,7 +65,7 @@ Item {
       visible: controls.practice
       theme: controls.theme; icon: "hint"; variant: "ghost"; focusable: false
       enabled: controls.myTurn
-      tooltip: "Indice"; shortcutHint: controls.label("hint")
+      tooltip: controls.theme.t("controls.hint"); shortcutHint: controls.label("hint")
       keyboardFocus: controls.buttons[controls.focusIndex] === hint
       onClicked: controls.hintRequested()
     }
@@ -96,18 +96,18 @@ Item {
       id: challenge
       visible: !!controls.legal.challenge
       theme: controls.theme; variant: "secondary"; focusable: false
-      text: controls.compact ? "Contester" : "Contester le coup"
+      text: controls.theme.t(controls.compact ? "controls.challenge.short" : "controls.challenge")
       icon: "challenge"
-      tooltip: "Faire vérifier les mots du dernier coup"; shortcutHint: controls.label("challenge")
+      tooltip: controls.theme.t("controls.challenge.tip"); shortcutHint: controls.label("challenge")
       keyboardFocus: controls.buttons[controls.focusIndex] === challenge
       onClicked: controls.challengeRequested()
     }
     GameButton {
       id: exchange
       theme: controls.theme; variant: "secondary"; focusable: false
-      text: controls.compact ? "" : "ÉCHANGER"; icon: controls.compact ? "exchange" : ""
+      text: controls.compact ? "" : controls.theme.t("controls.exchange"); icon: controls.compact ? "exchange" : ""
       enabled: !!controls.legal.exchange
-      tooltip: controls.compact ? "Échanger" : (controls.legal.exchange ? "" : "Moins de 7 lettres dans le sac")
+      tooltip: controls.compact ? controls.theme.t("controls.exchange.tip") : (controls.legal.exchange ? "" : controls.theme.t("controls.exchange.disabled"))
       shortcutHint: controls.label("exchange")
       keyboardFocus: controls.buttons[controls.focusIndex] === exchange
       onClicked: controls.exchangeRequested()
@@ -115,16 +115,16 @@ Item {
     GameButton {
       id: pass
       theme: controls.theme; variant: "secondary"; focusable: false
-      text: controls.compact ? "" : "PASSER"; icon: controls.compact ? "pass" : ""
+      text: controls.compact ? "" : controls.theme.t("controls.pass"); icon: controls.compact ? "pass" : ""
       enabled: !!controls.legal.pass
-      tooltip: controls.compact ? "Passer" : ""; shortcutHint: controls.label("pass")
+      tooltip: controls.compact ? controls.theme.t("controls.pass.tip") : ""; shortcutHint: controls.label("pass")
       keyboardFocus: controls.buttons[controls.focusIndex] === pass
       onClicked: controls.passRequested()
     }
     GameButton {
       id: play
       theme: controls.theme; variant: "primary"; focusable: false
-      text: "JOUER"
+      text: controls.theme.t("controls.play")
       enabled: controls.myTurn && controls.hasPending && (!controls.controller.preview || controls.controller.preview.valid || controls.controller.preview.reason === "DICTIONARY_UNAVAILABLE")
       shortcutHint: controls.label("confirm")
       keyboardFocus: controls.buttons[controls.focusIndex] === play

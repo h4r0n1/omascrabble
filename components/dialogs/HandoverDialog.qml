@@ -11,8 +11,8 @@ Dialog {
 
   signal reveal()
 
-  title: "Au tour de " + playerName
-  message: (lastMoveText !== "" ? lastMoveText + "\n\n" : "") + "Passez le clavier, puis affichez votre chevalet."
+  title: theme.t("handover.title", { name: playerName })
+  message: (lastMoveText !== "" ? lastMoveText + "\n\n" : "") + theme.t("handover.message")
   dismissible: false
   preferredWidth: 400
   Keys.onReturnPressed: reveal()
@@ -21,6 +21,6 @@ Dialog {
 
   Row {
     anchors.right: parent.right
-    GameButton { theme: dlg.theme; text: "Afficher mon chevalet"; variant: "primary"; onClicked: dlg.reveal() }
+    GameButton { theme: dlg.theme; text: dlg.theme.t("handover.button"); variant: "primary"; onClicked: dlg.reveal() }
   }
 }

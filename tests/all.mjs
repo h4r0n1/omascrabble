@@ -12,5 +12,6 @@ import * as ai from "./ai.test.mjs"
 import * as aiplayer from "./aiplayer.test.mjs"
 import * as stats from "./stats.test.mjs"
 import * as settings from "./settings.test.mjs"
+import * as i18n from "./i18n.test.mjs"
 
-export const SUITES = [board, scoring, bag, validation, endgame, serializer, dictionary, ai, aiplayer, stats, settings]
+export const SUITES = [board, scoring, bag, validation, endgame, serializer, dictionary, ai, aiplayer, stats, settings, i18n]

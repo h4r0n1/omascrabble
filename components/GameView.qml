@@ -3,6 +3,7 @@ import "dialogs"
 import "screens"
 import "../app/settings.mjs" as SettingsModel
 import "../engine/board.mjs" as BoardModel
+import "../app/i18n/i18n.mjs" as I18n
 
 // The whole game UI. Pure QtQuick on top of the shell's theme tokens; all
 // state comes from the GameController, all persistence from the SaveManager.
@@ -33,6 +34,7 @@ FocusScope {
 
   Theme {
     id: appTheme
+    language: I18n.resolveLanguage(view.settings.language, Qt.locale().name)
     appearance: view.settings.appearance
     systemPrefersDark: view.systemPrefersDark
     animation: view.settings.animation
@@ -219,6 +221,7 @@ FocusScope {
         theme: appTheme
         controller: view.controller
         showCoordinates: view.settings.gameplay.showCoordinates
+        notation: view.controller ? view.controller.gameLanguage : "fr"
         showLabels: appTheme.premiumLabels
         cursorVisible: view.keyboardMode && view.keyZone === "board" && keys.activeFocus
         cursorRow: view.boardCursor.row
@@ -349,7 +352,7 @@ FocusScope {
           width: parent.width - 2 * appTheme.padding
           spacing: appTheme.space
           Text {
-            text: view.controller.pending.length > 0 ? "VOTRE COUP" : view.lastMoveTitle()
+            text: view.controller.pending.length > 0 ? tr("panel.yourMove") : view.lastMoveTitle()
             color: appTheme.muted
             font.family: appTheme.fontFamily
             font.pixelSize: appTheme.fontCaption
@@ -372,14 +375,14 @@ FocusScope {
             onWordActivated: function(word) {
               if (view.controller.lastCommitted) view.showMoveWords(view.controller.lastCommitted.moveIndex)
             }
-            emptyText: view.controller.isActive ? (view.controller.humanTurn ? "À vous de jouer. Placez des lettres sur le plateau." : "") : ""
+            emptyText: view.controller.isActive ? (view.controller.humanTurn ? tr("panel.yourTurnHint") : "") : ""
             showValidity: false
           }
           Text {
             visible: !!view.controller.bestMoveReveal
             width: parent.width
             wrapMode: Text.WordWrap
-            text: view.controller.bestMoveReveal ? ("Meilleur coup possible : " + view.controller.bestMoveReveal.word + " (" + view.controller.bestMoveReveal.score + " pts)") : ""
+            text: view.controller.bestMoveReveal ? tr("panel.bestMove", { word: view.controller.bestMoveReveal.word, score: view.controller.bestMoveReveal.score }) : ""
             color: appTheme.accent
             font.family: appTheme.fontFamily
             font.pixelSize: appTheme.fontSmall
@@ -412,7 +415,7 @@ FocusScope {
           id: historyTitle
           x: appTheme.padding
           y: appTheme.padding * 0.8
-          text: "HISTORIQUE  ·  " + view.controller.bagCount + " lettres dans le sac"
+          text: tr("panel.history", { bag: tr("common.tilesInBag", { n: view.controller.bagCount }) })
           color: appTheme.muted
           font.family: appTheme.fontFamily
           font.pixelSize: appTheme.fontCaption
@@ -459,7 +462,7 @@ FocusScope {
       Text {
         id: drawerTitle
         x: appTheme.padding; y: appTheme.padding
-        text: "HISTORIQUE  ·  " + view.controller.bagCount + " lettres dans le sac"
+        text: tr("panel.history", { bag: tr("common.tilesInBag", { n: view.controller.bagCount }) })
         color: appTheme.muted
         font.family: appTheme.fontFamily
         font.pixelSize: appTheme.fontCaption
@@ -483,16 +486,15 @@ FocusScope {
   // ------------------------------------------------------- presentation
 
   signal scoreFlyout(int player, int points, bool bingo)
+  function tr(key, args) { return appTheme.t(key, args) }
 
   function gameSubtitle() {
     var g = controller ? controller.game : null
     if (!g) return ""
-    var mode = g.mode === "human_vs_ai" ? "Contre l’ordinateur" : g.mode === "human_vs_human" ? "Deux joueurs"
-      : g.mode === "ai_vs_ai" ? "Démonstration" : "Entraînement"
-    var parts = [mode]
-    if (g.rules.validation === "challenge") parts.push("avec contestation")
-    if (g.rules.time.totalMs > 0) parts.push(Math.round(g.rules.time.totalMs / 60000) + " min")
-    parts.push(g.dictionary.name || "Dictionnaire")
+    var parts = [g.mode === "human_vs_human" ? tr("mode.human_vs_human.short") : tr("mode." + g.mode)]
+    if (g.rules.validation === "challenge") parts.push(tr("mode.withChallenge"))
+    if (g.rules.time.totalMs > 0) parts.push(tr("common.minutes", { n: Math.round(g.rules.time.totalMs / 60000) }))
+    parts.push(tr("dict." + (g.dictionary.id || "open-fr") + ".label"))
     return parts.join("  ·  ")
   }
 
@@ -501,25 +503,25 @@ FocusScope {
     if (!c || !c.game) return ""
     if (c.isOver) {
       var w = c.game.end.winner
-      return w === null ? (c.game.players.length > 1 ? "Égalité" : "Partie terminée") : (w === index ? "Victoire" : "")
+      return w === null ? tr(c.game.players.length > 1 ? "status.draw" : "status.gameOver") : (w === index ? tr("status.victory") : "")
     }
-    if (c.current !== index) return c.game.players[index].rack.length + " lettres"
-    if (c.game.players[index].kind === "ai") return c.aiThinking ? "L’ordinateur réfléchit…" : "Tour de l’ordinateur"
-    if (c.handoverPending) return "En attente…"
-    if (c.game.mode === "human_vs_human") return "À vous, " + c.game.players[index].name
-    return "Votre tour"
+    if (c.current !== index) return tr("status.tiles", { n: c.game.players[index].rack.length })
+    if (c.game.players[index].kind === "ai") return tr(c.aiThinking ? "status.computerThinking" : "status.computerTurn")
+    if (c.handoverPending) return tr("status.waiting")
+    if (c.game.mode === "human_vs_human") return tr("status.yourTurnNamed", { name: c.playerLabel(index) })
+    return tr("status.yourTurn")
   }
 
   function scoreSummary() {
     var c = controller
     if (!c || !c.game) return ""
-    if (c.isOver) return "Partie terminée"
-    if (!c.humanTurn) return c.aiThinking ? "L’ordinateur réfléchit…" : ""
+    if (c.isOver) return tr("status.gameOver")
+    if (!c.humanTurn) return c.aiThinking ? tr("status.computerThinking") : ""
     var p = c.preview
     if (!p) return c.pending.length ? "" : ""
-    if (!view.settings.gameplay.showScorePreview) return p.valid ? "Prêt" : ""
+    if (!view.settings.gameplay.showScorePreview) return p.valid ? tr("status.ready") : ""
     if (!p.valid && (!p.words || p.words.length === 0)) return ""
-    return p.score + " pts" + (p.bingo ? "  ·  Scrabble !" : "")
+    return tr("common.pts", { n: p.score }) + (p.bingo ? "  ·  " + tr("status.scrabble") : "")
   }
 
   function previewSummary() {
@@ -527,18 +529,18 @@ FocusScope {
     if (!c || !c.game) return ""
     var p = c.preview
     if (c.pending.length && p) {
-      if (!p.valid) return p.message
+      if (!p.valid) return c.reasonText(p.reason, p)
       return p.words.map(function(w) { return (w.notation || w.word) + " " + w.score }).join("  ·  ") + (p.bingo ? "  ·  +" + p.bonus : "")
     }
     var last = view.lastMovePreview()
-    if (last) return lastMoveTitle().toLowerCase() + " : " + last.words.map(function(w) { return (w.notation || w.word) + " " + w.score }).join("  ·  ") + " = " + last.score
-    return c.bagCount + " lettres dans le sac"
+    if (last) return lastMoveTitle().toLowerCase() + tr("common.colon") + last.words.map(function(w) { return (w.notation || w.word) + " " + w.score }).join("  ·  ") + " = " + last.score
+    return tr("common.tilesInBag", { n: c.bagCount })
   }
 
   function lastMoveTitle() {
     var c = controller
-    if (!c || !c.game || !c.lastCommitted) return "DERNIER COUP"
-    return "DERNIER COUP · " + c.playerLabel(c.lastCommitted.player).toUpperCase()
+    if (!c || !c.game || !c.lastCommitted) return tr("panel.lastMove")
+    return tr("panel.lastMoveBy", { name: c.playerLabel(c.lastCommitted.player).toUpperCase() })
   }
 
   function lastMovePreview() {
@@ -560,7 +562,7 @@ FocusScope {
     var m = controller.game ? controller.game.moves[index] : null
     if (!m || m.type !== "play") return
     var words = m.words.map(function(w) { return w.word })
-    openWords(words, controller.playerLabel(m.player) + "  ·  " + m.position + "  ·  " + m.score + " pts" + (m.withdrawn ? "  ·  coup annulé" : ""))
+    openWords(words, controller.playerLabel(m.player) + "  ·  " + m.position + "  ·  " + tr("common.pts", { n: m.score }) + (m.withdrawn ? "  ·  " + tr("panel.moveCancelled") : ""))
   }
   function openWords(words, subtitle) {
     if (!words || !words.length) return
@@ -580,12 +582,12 @@ FocusScope {
 
   function askPass() {
     if (!controller.legal.pass) return
-    confirmDialog.ask("pass", "Passer votre tour ?", "Vous ne marquez aucun point ce tour-ci.", "Passer", false)
+    confirmDialog.ask("pass", tr("confirm.pass.title"), tr("confirm.pass.message"), tr("confirm.pass.button"), false)
   }
 
   function openExchange() {
     if (!controller.legal.exchange) {
-      controller.say("L’échange n’est possible que s’il reste au moins 7 lettres dans le sac.", "error")
+      controller.say(tr("notice.exchangeNeedsBag"), "error")
       return
     }
     controller.recallAll()
@@ -646,6 +648,7 @@ FocusScope {
   property var connectedController: null
   onControllerChanged: {
     if (connectedController === controller || !controller) return
+    controller.tr = function(key, args) { return appTheme.t(key, args) }
     controller.moveCommitted.connect(view.onMoveCommitted)
     controller.moveRejected.connect(view.onMoveRejected)
     controller.gameEnded.connect(view.onGameEnded)
@@ -770,7 +773,7 @@ FocusScope {
     }
 
     if (shortcut("help", event)) { shortcutsDialog.open = true; return true }
-    if (shortcut("save", event)) { c.persist(); c.say("Partie sauvegardée.", "info"); return true }
+    if (shortcut("save", event)) { c.persist(); c.say(tr("notice.saved"), "info"); return true }
     if (shortcut("cancel", event)) {
       if (c.recallAll()) {
         typedCells = []
@@ -855,7 +858,7 @@ FocusScope {
           if (c.placeTile(c.selectedTileId, boardCursor.row, boardCursor.col) && sounds) sounds.play("place")
         } else if (info.kind === "empty") {
           typingDirection = typingDirection === "H" ? "V" : "H"
-          c.say(typingDirection === "H" ? "Saisie horizontale" : "Saisie verticale", "info")
+          c.say(tr(typingDirection === "H" ? "notice.typingHorizontal" : "notice.typingVertical"), "info")
         }
         return true
       }
@@ -887,7 +890,7 @@ FocusScope {
 
   function askNewGame() {
     if (controller.isActive && controller.game.moves.length > 0)
-      confirmDialog.ask("newgame", "Commencer une nouvelle partie ?", "La partie en cours sera abandonnée et comptera comme une défaite contre l’ordinateur.", "Nouvelle partie", true)
+      confirmDialog.ask("newgame", tr("confirm.newGame.title"), tr("confirm.newGame.message"), tr("confirm.newGame.button"), true)
     else view.screen = "setup"
   }
 
@@ -936,10 +939,10 @@ FocusScope {
     id: moveConfirm
     theme: appTheme
     open: view.controller.confirmRequested
-    title: "Jouer ce coup ?"
-    message: view.controller.preview ? view.controller.preview.words.map(function(w) { return (w.notation || w.word) + " " + w.score }).join(" · ") + " — total " + view.controller.preview.score + " pts" : ""
-    confirmText: "Jouer"
-    cancelText: "Modifier"
+    title: tr("confirm.move.title")
+    message: view.controller.preview ? tr("confirm.move.message", { words: view.controller.preview.words.map(function(w) { return (w.notation || w.word) + " " + w.score }).join(" · "), score: view.controller.preview.score }) : ""
+    confirmText: tr("confirm.move.button")
+    cancelText: tr("confirm.move.cancel")
     onConfirmed: { view.controller.confirmMove(); keys.forceActiveFocus() }
     onCancelled: { view.controller.cancelConfirm(); keys.forceActiveFocus() }
   }
@@ -950,7 +953,8 @@ FocusScope {
     open: view.controller.challengeOutcome !== null
     outcome: view.controller.challengeOutcome
     forms: view.controller.displayForms
-    dictionaryName: view.controller.game ? view.controller.game.dictionary.name : ""
+    controller: view.controller
+    dictionaryName: view.controller.game ? tr("dict." + (view.controller.game.dictionary.id || "open-fr") + ".label") : ""
     onClosed: { view.controller.dismissChallenge(); keys.forceActiveFocus() }
   }
 
@@ -960,7 +964,7 @@ FocusScope {
     playerName: view.controller.game ? view.controller.playerLabel(view.controller.current) : ""
     lastMoveText: {
       var p = view.lastMovePreview()
-      return p ? view.controller.playerLabel(view.controller.lastCommitted.player) + " a joué " + p.words[0].word + " (" + p.score + " pts)." : ""
+      return p ? tr("handover.lastMove", { name: view.controller.playerLabel(view.controller.lastCommitted.player), word: p.words[0].word, score: p.score }) : ""
     }
     onReveal: { view.controller.revealRack(); keys.forceActiveFocus() }
   }
@@ -969,6 +973,7 @@ FocusScope {
     id: wordDialog
     theme: appTheme
     definitions: view.definitions
+    gameLanguage: view.controller ? view.controller.gameLanguage : "fr"
     forms: view.controller ? view.controller.displayForms : ({})
     onClosed: {
       open = false
@@ -988,15 +993,15 @@ FocusScope {
     id: menu
     theme: appTheme
     items: [
-      { id: "new", text: "Nouvelle partie", enabled: true },
-      { id: "resign", text: "Abandonner la partie", enabled: view.controller.isActive },
-      { id: "replay", text: "Revoir la partie", enabled: !!(view.controller.game && view.controller.game.moves.length) },
-      { id: "shortcuts", text: "Raccourcis clavier", enabled: true },
-      { id: "about", text: "Dictionnaire et licences", enabled: true }
+      { id: "new", text: tr("menu.newGame"), enabled: true },
+      { id: "resign", text: tr("menu.resign"), enabled: view.controller.isActive },
+      { id: "replay", text: tr("menu.replay"), enabled: !!(view.controller.game && view.controller.game.moves.length) },
+      { id: "shortcuts", text: tr("menu.shortcuts"), enabled: true },
+      { id: "about", text: tr("menu.about"), enabled: true }
     ]
     onActivated: function(id) {
       if (id === "new") view.askNewGame()
-      else if (id === "resign") confirmDialog.ask("resign", "Abandonner la partie ?", "La partie s’arrête et compte comme une défaite.", "Abandonner", true)
+      else if (id === "resign") confirmDialog.ask("resign", tr("confirm.resign.title"), tr("confirm.resign.message"), tr("confirm.resign.button"), true)
       else if (id === "replay") view.replaying = true
       else if (id === "shortcuts") shortcutsDialog.open = true
       else if (id === "about") { view.overlay = "settings"; settingsScreen.section = "about" }
@@ -1092,7 +1097,7 @@ FocusScope {
       width: Math.min(implicitWidth, view.width - 4 * appTheme.padding)
       wrapMode: Text.WordWrap
       horizontalAlignment: Text.AlignHCenter
-      text: "La version " + view.installedVersion + " est installée (" + view.runningVersion + " en cours). Redémarrez le shell pour l’utiliser : omarchy restart shell"
+      text: tr("update.banner", { installed: view.installedVersion, running: view.runningVersion })
       color: appTheme.foreground
       font.family: appTheme.fontFamily
       font.pixelSize: appTheme.fontSmall
@@ -1132,12 +1137,12 @@ FocusScope {
   ConfirmDialog {
     theme: appTheme
     open: !!(view.saves && view.saves.problem) && view.screen !== "game"
-    title: "Une sauvegarde n’a pas pu être lue"
+    title: tr("saveProblem.title")
     message: view.saves && view.saves.problem
-      ? (view.saves.problem.message + "\n\nLe fichier n’a pas été supprimé : il est conservé ici :\n" + view.saves.problem.keptAs)
+      ? (tr("save." + view.saves.problem.error) + "\n\n" + tr("saveProblem.kept") + "\n" + view.saves.problem.keptAs)
       : ""
-    confirmText: "Compris"
-    cancelText: "Fermer"
+    confirmText: tr("saveProblem.ok")
+    cancelText: tr("common.close")
     onConfirmed: view.saves.dismissProblem()
     onCancelled: view.saves.dismissProblem()
   }

@@ -29,17 +29,18 @@ export const SAVE_ERROR = Object.freeze({
   CORRUPT: "CORRUPT"
 })
 
+// Developer-facing; players see the "save.<CODE>" catalog strings.
 const ERROR_MESSAGES = {
-  EMPTY: "Le fichier de sauvegarde est vide.",
-  MALFORMED_JSON: "Le fichier de sauvegarde est illisible.",
-  NOT_A_SAVE: "Ce fichier n’est pas une sauvegarde de partie.",
-  NEWER_VERSION: "Cette sauvegarde vient d’une version plus récente du jeu.",
-  UNSUPPORTED_VERSION: "Ce format de sauvegarde n’est plus pris en charge.",
-  CORRUPT: "La sauvegarde est incomplète ou endommagée."
+  EMPTY: "Save file is empty.",
+  MALFORMED_JSON: "Save file is not valid JSON.",
+  NOT_A_SAVE: "Not an Omascrabble save.",
+  NEWER_VERSION: "Save comes from a newer version.",
+  UNSUPPORTED_VERSION: "Save format no longer supported.",
+  CORRUPT: "Save is incomplete or damaged."
 }
 
 function failure(code, detail) {
-  return { ok: false, error: code, message: ERROR_MESSAGES[code] || "Sauvegarde invalide.", detail: detail || "" }
+  return { ok: false, error: code, message: ERROR_MESSAGES[code] || "Invalid save.", detail: detail || "" }
 }
 
 class CorruptSave extends Error {}

@@ -5,7 +5,7 @@ Item {
   id: header
 
   property var theme
-  property string title: "Omascrabble"
+  property string title: theme ? theme.t("app.name") : "Omascrabble"
   property string subtitle: ""
   property bool showBack: true
   property bool historyAvailable: false
@@ -30,7 +30,7 @@ Item {
       icon: "back"
       variant: "ghost"
       focusable: false
-      tooltip: "Accueil"
+      tooltip: header.theme.t("header.home")
       anchors.verticalCenter: parent.verticalCenter
       onClicked: header.backRequested()
     }
@@ -67,14 +67,14 @@ Item {
       visible: header.historyAvailable
       theme: header.theme; icon: "history"; variant: "ghost"; focusable: false
       checked: header.historyOpen
-      tooltip: "Historique des coups"
+      tooltip: header.theme.t("header.history")
       onClicked: header.historyRequested()
     }
-    GameButton { theme: header.theme; icon: "stats"; variant: "ghost"; focusable: false; tooltip: "Statistiques"; onClicked: header.statsRequested() }
-    GameButton { theme: header.theme; icon: "settings"; variant: "ghost"; focusable: false; tooltip: "Réglages"; onClicked: header.settingsRequested() }
+    GameButton { theme: header.theme; icon: "stats"; variant: "ghost"; focusable: false; tooltip: header.theme.t("header.stats"); onClicked: header.statsRequested() }
+    GameButton { theme: header.theme; icon: "settings"; variant: "ghost"; focusable: false; tooltip: header.theme.t("header.settings"); onClicked: header.settingsRequested() }
     GameButton {
       id: more
-      theme: header.theme; icon: "more"; variant: "ghost"; focusable: false; tooltip: "Plus"
+      theme: header.theme; icon: "more"; variant: "ghost"; focusable: false; tooltip: header.theme.t("header.more")
       onClicked: {
         var p = more.mapToItem(null, 0, more.height)
         header.menuRequested(p.x + more.width, p.y)

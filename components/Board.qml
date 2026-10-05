@@ -1,5 +1,6 @@
 import QtQuick
 import "../engine/board.mjs" as BoardModel
+import "../engine/notation.mjs" as Notation
 
 // The 15 × 15 board with optional coordinates (rows A–O, columns 1–15, the
 // French Scrabble convention). One mouse area serves the whole grid and maps
@@ -10,6 +11,8 @@ Item {
   property var theme
   property var controller
   property bool showCoordinates: true
+  // "fr": rows A–O, columns 1–15; "en": columns A–O, rows 1–15.
+  property string notation: "fr"
   property bool showLabels: true
   property bool cursorVisible: false
   property int cursorRow: 7
@@ -86,7 +89,7 @@ Item {
         height: board.labelSize
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
-        text: index + 1
+        text: Notation.colLabel(index, board.notation)
         color: board.cursorVisible && board.cursorCol === index ? board.theme.accent : board.theme.muted
         font.family: board.theme.fontFamily
         font.pixelSize: Math.max(8, Math.round(board.cellSize * 0.34))
@@ -107,7 +110,7 @@ Item {
         height: board.cellSize
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
-        text: String.fromCharCode(65 + index)
+        text: Notation.rowLabel(index, board.notation)
         color: board.cursorVisible && board.cursorRow === index ? board.theme.accent : board.theme.muted
         font.family: board.theme.fontFamily
         font.pixelSize: Math.max(8, Math.round(board.cellSize * 0.34))
@@ -149,6 +152,7 @@ Item {
           col: c
           size: board.cellSize
           premium: BoardModel.PREMIUM_LAYOUT[index]
+          cellLabel: Notation.cellLabel(r, c, board.notation)
           kind: info ? info.kind : "empty"
           letter: info ? info.letter : ""
           points: info ? info.points : 0

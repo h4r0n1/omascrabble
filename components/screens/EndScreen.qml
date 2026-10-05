@@ -25,47 +25,44 @@ FocusScope {
   onVisibleChanged: if (visible) Qt.callLater(function() { end.forceActiveFocus() })
   Keys.onEscapePressed: closeRequested()
 
-  // "de" elides before a vowel or a mute h: Victoire d’Anne, de Paul.
-  function de(name) {
-    return /^[AEIOUYHÀÂÉÈÊËÎÏÔÛÙ]/i.test(name) ? "d’" + name : "de " + name
-  }
+  function tr(key, args) { return theme.t(key, args) }
+  function name(index) { return controller ? controller.playerLabel(index) : "" }
 
   function title() {
     if (!info) return ""
-    if (g.players.length === 1) return "Partie terminée"
-    if (info.winner === null) return "Égalité"
-    if (g.mode === "human_vs_ai") return info.winner === me ? "Victoire" : "Défaite"
-    if (g.mode === "ai_vs_ai") return g.players[info.winner].name + " l’emporte"
-    return "Victoire " + de(g.players[info.winner].name)
+    if (g.players.length === 1) return tr("end.gameOver")
+    if (info.winner === null) return tr("end.draw")
+    if (g.mode === "human_vs_ai") return tr(info.winner === me ? "end.victory" : "end.defeat")
+    if (g.mode === "ai_vs_ai") return tr("end.winsDemo", { name: name(info.winner) })
+    return tr("end.winsNamed", { name: name(info.winner) })
   }
 
-  // "Vous" and "Ordinateur" are labels; sentences need real French.
+  // Default labels ("Vous", "Ordinateur") need real sentences.
   function isYou(index) { return g && g.mode !== "human_vs_human" && g.players[index] && g.players[index].kind === "human" }
   function isComputer(index) { return g && g.players[index] && g.players[index].kind === "ai" }
 
   function reason() {
     if (!info) return ""
     var a = info.actor
-    var known = a !== null && a !== undefined && g.players[a]
-    var who = !known ? "" : isComputer(a) && g.mode !== "ai_vs_ai" ? "L’ordinateur" : g.players[a].name
-    if (info.reason === "out") return known && isYou(a)
-      ? "Vous avez posé votre dernière lettre : le sac et votre chevalet sont vides."
-      : who + " a posé sa dernière lettre : le sac et son chevalet sont vides."
-    if (info.reason === "scoreless") return "Plusieurs tours de suite sans marquer de point : la partie s’arrête."
-    if (info.reason === "timeout") return known && isYou(a) ? "Votre temps est écoulé." : "Temps écoulé pour " + (isComputer(a) ? "l’ordinateur" : who) + "."
-    if (info.reason === "resign") return known && isYou(a) ? "Vous avez abandonné la partie." : who + " a abandonné la partie."
+    var known = a !== null && a !== undefined && !!g.players[a]
+    var who = !known ? "" : isComputer(a) && g.mode !== "ai_vs_ai" ? tr("player.computerSubject") : name(a)
+    if (info.reason === "out") return known && isYou(a) ? tr("end.reason.out.you") : tr("end.reason.out", { who: who })
+    if (info.reason === "scoreless") return tr("end.reason.scoreless")
+    if (info.reason === "timeout") return known && isYou(a) ? tr("end.reason.timeout.you")
+      : tr("end.reason.timeout", { who: isComputer(a) && g.mode !== "ai_vs_ai" ? tr("end.computerLower") : who })
+    if (info.reason === "resign") return known && isYou(a) ? tr("end.reason.resign.you") : tr("end.reason.resign", { who: who })
     return ""
   }
 
   function wordsTitle(index) {
-    if (isYou(index)) return "VOS MOTS"
-    if (isComputer(index) && g.mode !== "ai_vs_ai") return "MOTS DE L’ORDINATEUR"
-    return ("MOTS " + de(g.players[index].name)).toUpperCase()
+    if (isYou(index)) return tr("end.wordsYou")
+    if (isComputer(index) && g.mode !== "ai_vs_ai") return tr("end.wordsComputer")
+    return tr("end.wordsNamed", { name: name(index) })
   }
 
   function duration(ms) {
     var m = Math.round(ms / 60000)
-    return m < 1 ? "moins d’une minute" : m + " min"
+    return m < 1 ? tr("common.lessThanAMinute") : tr("common.minutes", { n: m })
   }
 
   function wordsOf(player) {
@@ -149,7 +146,7 @@ FocusScope {
               Text {
                 x: end.theme.padding
                 anchors.verticalCenter: parent.verticalCenter
-                text: end.g.players[index].name
+                text: end.name(index)
                 color: end.theme.foreground
                 font.family: end.theme.fontFamily
                 font.pixelSize: end.theme.fontTitle
@@ -160,7 +157,7 @@ FocusScope {
                 anchors.rightMargin: end.theme.spaceHuge
                 anchors.verticalCenter: parent.verticalCenter
                 readonly property int adj: end.info ? end.info.adjustments[index] : 0
-                text: end.g.players[index].score + (adj !== 0 ? (adj > 0 ? "  + " + adj : "  − " + (-adj)) + (end.info.timePenalties && end.info.timePenalties[index] ? " (dont temps)" : " (lettres restantes)") : "")
+                text: end.g.players[index].score + (adj !== 0 ? (adj > 0 ? "  + " + adj : "  − " + (-adj)) + (end.info.timePenalties && end.info.timePenalties[index] ? end.tr("end.adjustTime") : end.tr("end.adjustTiles")) : "")
                 color: end.theme.muted
                 font.family: end.theme.fontFamily
                 font.pixelSize: end.theme.fontSmall
@@ -186,12 +183,12 @@ FocusScope {
           spacing: end.theme.space
           Repeater {
             model: end.summary ? [
-              ["Coups joués", end.summary.moveScores.length],
-              ["Moyenne par coup", end.summary.moveScores.length ? Math.round(end.summary.moveScores.reduce(function(a, b) { return a + b }, 0) / end.summary.moveScores.length) : 0],
-              ["Scrabbles", end.summary.scrabbles],
-              ["Meilleur coup", end.summary.bestWord ? end.summary.bestWord.notation + " · " + end.summary.bestWord.score : "—"],
-              ["Lettres posées", end.summary.tilesPlayed],
-              ["Durée", end.duration(end.summary.durationMs)]
+              [end.tr("end.stat.moves"), end.summary.moveScores.length],
+              [end.tr("end.stat.average"), end.summary.moveScores.length ? Math.round(end.summary.moveScores.reduce(function(a, b) { return a + b }, 0) / end.summary.moveScores.length) : 0],
+              [end.tr("end.stat.scrabbles"), end.summary.scrabbles],
+              [end.tr("end.stat.best"), end.summary.bestWord ? end.summary.bestWord.notation + " · " + end.summary.bestWord.score : "—"],
+              [end.tr("end.stat.tiles"), end.summary.tilesPlayed],
+              [end.tr("end.stat.duration"), end.duration(end.summary.durationMs)]
             ] : []
             Rectangle {
               required property var modelData
@@ -285,10 +282,10 @@ FocusScope {
       anchors.bottom: parent.bottom
       anchors.margins: end.theme.padding
       spacing: end.theme.space
-      GameButton { theme: end.theme; text: "Fermer"; variant: "ghost"; onClicked: end.closeRequested() }
-      GameButton { theme: end.theme; text: "Revoir la partie"; icon: "replay"; variant: "secondary"; onClicked: end.replayRequested() }
-      GameButton { theme: end.theme; text: "Revanche"; variant: "secondary"; visible: !!end.g && end.g.mode !== "practice" && end.g.mode !== "ai_vs_ai"; onClicked: end.rematchRequested() }
-      GameButton { theme: end.theme; text: "NOUVELLE PARTIE"; variant: "primary"; onClicked: end.newGameRequested() }
+      GameButton { theme: end.theme; text: end.tr("common.close"); variant: "ghost"; onClicked: end.closeRequested() }
+      GameButton { theme: end.theme; text: end.tr("end.replay"); icon: "replay"; variant: "secondary"; onClicked: end.replayRequested() }
+      GameButton { theme: end.theme; text: end.tr("end.rematch"); variant: "secondary"; visible: !!end.g && end.g.mode !== "practice" && end.g.mode !== "ai_vs_ai"; onClicked: end.rematchRequested() }
+      GameButton { theme: end.theme; text: end.tr("end.newGame"); variant: "primary"; onClicked: end.newGameRequested() }
     }
   }
 }
