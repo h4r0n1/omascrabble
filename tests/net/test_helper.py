@@ -128,6 +128,35 @@ if __name__ == "__main__":
     unittest.main()
 
 
+class FriendsFromGamesTest(unittest.TestCase):
+    def test_earlier_tox_games_become_friends_once(self):
+        root = tempfile.mkdtemp()
+        try:
+            online = os.path.join(root, "omascrabble", "online")
+            os.makedirs(online)
+            key = "AB" * 32
+            with open(os.path.join(online, "0123456789abcdef.json"), "w") as f:
+                json.dump({"stage": "ended", "peerName": "Sultan", "link": {"kind": "tox", "peer": key}}, f)
+            with open(os.path.join(online, "fedcba9876543210.json"), "w") as f:
+                json.dump({"stage": "inviting", "peerName": "", "link": {"kind": "tox", "role": "inviter"}}, f)
+            p = Proc(root)
+            p.send({"cmd": "hello", "name": "Me"})
+            ev = wait_for([p], 0, "friends")
+            self.assertEqual([(f["id"], f["name"]) for f in ev["list"]], [(key, "Sultan")])
+            p.send({"cmd": "forget", "friend": key})
+            end = time.time() + 10
+            while time.time() < end and not any(e.get("ev") == "friends" and not e["list"] for e in p.events):
+                p.pump()
+            p.close()
+            # Removed stays removed: no new backfill once the file exists.
+            p2 = Proc(root)
+            p2.send({"cmd": "hello", "name": "Me"})
+            self.assertEqual(wait_for([p2], 0, "friends")["list"], [])
+            p2.close()
+        finally:
+            shutil.rmtree(root)
+
+
 class NoBytecodeTest(unittest.TestCase):
     """The helper runs from the plugin folder, which Omarchy watches: it must
     never write __pycache__ there (that reloads the plugin and closes the

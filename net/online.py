@@ -281,8 +281,35 @@ class Helper:
             with open(self._friends_path(), encoding="utf-8") as f:
                 data = json.load(f)
             return {k: v for k, v in data.items() if isinstance(v, dict) and len(k) == 64}
+        except FileNotFoundError:
+            return self._friends_from_games()
         except (OSError, ValueError, AttributeError):
             return {}
+
+    def _friends_from_games(self):
+        """First run with friends: the people of earlier online games (over
+        Tox) become friends. Only done while there is no friends file, so a
+        friend removed later stays removed."""
+        friends = {}
+        for name in os.listdir(self.dir):
+            if not name.endswith(".json") or name in ("friends.json", "nodes.json"):
+                continue
+            try:
+                with open(os.path.join(self.dir, name), encoding="utf-8") as f:
+                    s = json.load(f)
+            except (OSError, ValueError):
+                continue
+            link = s.get("link") if isinstance(s, dict) else None
+            key = link.get("peer") if isinstance(link, dict) and link.get("kind") == "tox" else None
+            if not key or len(key) != 64 or s.get("stage") not in ("playing", "ended", "dealing"):
+                continue
+            last = int(os.path.getmtime(os.path.join(self.dir, name)))
+            if key not in friends or friends[key]["last"] < last:
+                friends[key] = {"name": str(s.get("peerName", ""))[:40], "last": last}
+        if friends:
+            self.friends = friends
+            self._save_friends()
+        return friends
 
     def _save_friends(self):
         tmp = self._friends_path() + ".tmp"

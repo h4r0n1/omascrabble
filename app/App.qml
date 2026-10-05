@@ -69,7 +69,8 @@ Item {
     target: saveManager
     function onReadyChanged() {
       var o = saveManager.settings.online
-      if (saveManager.ready && o.listen && o.knownFriends) onlineService.hello()
+      var playedOnline = saveManager.savedGame && saveManager.savedGame.mode === "online"
+      if (saveManager.ready && o.listen && (o.knownFriends || playedOnline)) onlineService.hello()
     }
   }
 
