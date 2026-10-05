@@ -59,6 +59,10 @@ FocusScope {
     onPressed: function(mouse) { view.keyboardMode = false; mouse.accepted = false }
   }
 
+  function askResetStats() {
+    confirmDialog.ask("resetStats", tr("confirm.resetStats.title"), tr("confirm.resetStats.message"), tr("confirm.resetStats.button"), true)
+  }
+
   function openSettings(section) {
     settingsScreen.section = section || ""
     overlay = "settings"
@@ -948,9 +952,15 @@ FocusScope {
       if (action === "pass") view.controller.pass()
       else if (action === "resign") view.controller.resign()
       else if (action === "newgame") { view.controller.resign(); view.screen = "setup" }
-      keys.forceActiveFocus()
+      else if (action === "resetStats") { view.saves.resetStats(); view.controller.say(tr("notice.statsReset"), "info") }
+      if (view.overlay === "stats") statsScreen.forceActiveFocus()
+      else keys.forceActiveFocus()
     }
-    onCancelled: { open = false; keys.forceActiveFocus() }
+    onCancelled: {
+      open = false
+      if (view.overlay === "stats") statsScreen.forceActiveFocus()
+      else keys.forceActiveFocus()
+    }
   }
 
   ConfirmDialog {
@@ -1055,12 +1065,14 @@ FocusScope {
   }
 
   StatsScreen {
+    id: statsScreen
     anchors.fill: parent
     z: 70
     visible: view.overlay === "stats"
     theme: appTheme
     saves: view.saves
     onClosed: { view.overlay = ""; keys.forceActiveFocus() }
+    onResetRequested: view.askResetStats()
   }
 
   SettingsScreen {

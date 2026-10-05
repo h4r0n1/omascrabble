@@ -243,6 +243,11 @@ save, written after every move), `settings.json`, `stats.json`, `archive/`
 (finished games), `quarantine/` (files that could not be read — kept, never
 deleted).
 
+*Statistics → Reset* clears every statistic and record after a confirmation.
+The previous numbers are kept in `stats-backup.json` (one copy, replaced at
+each reset; copy it back over `stats.json` while the game is closed to undo);
+archived games are not deleted.
+
 IPC, for scripts and keybindings:
 
 ```bash

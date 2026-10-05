@@ -275,6 +275,11 @@ export const EN = {
   "end.newGame": "NEW GAME",
 
   // ---------------------------------------------------------------- stats
+  "stats.reset": "Reset",
+  "confirm.resetStats.title": "Reset statistics?",
+  "confirm.resetStats.message": "All statistics and records will go back to zero. Archived games are not deleted.",
+  "confirm.resetStats.button": "Reset",
+  "notice.statsReset": "Statistics reset.",
   "stats.title": "Statistics",
   "stats.empty": "No finished games yet. Your statistics will appear here.",
   "stats.games": "Games",

@@ -13,6 +13,7 @@ FocusScope {
   property var saves
 
   signal closed()
+  signal resetRequested()
 
   readonly property var s: saves ? saves.stats : Stats.emptyStats()
   readonly property var d: Stats.deriveStats(s)
@@ -43,16 +44,33 @@ FocusScope {
       y: stats.theme.spaceHuge
       spacing: stats.theme.spaceHuge
 
-      Row {
-        spacing: stats.theme.space
-        GameButton { theme: stats.theme; icon: "back"; variant: "ghost"; focusable: false; tooltip: stats.tr("common.back"); onClicked: stats.closed(); anchors.verticalCenter: parent.verticalCenter }
-        Text {
-          text: stats.tr("stats.title")
-          color: stats.theme.foreground
-          font.family: stats.theme.fontFamily
-          font.pixelSize: stats.theme.fontDisplay
-          font.weight: Font.Bold
+      Item {
+        width: parent.width
+        height: Math.max(titleRow.height, resetButton.height)
+        Row {
+          id: titleRow
+          spacing: stats.theme.space
           anchors.verticalCenter: parent.verticalCenter
+          GameButton { theme: stats.theme; icon: "back"; variant: "ghost"; focusable: false; tooltip: stats.tr("common.back"); onClicked: stats.closed(); anchors.verticalCenter: parent.verticalCenter }
+          Text {
+            text: stats.tr("stats.title")
+            color: stats.theme.foreground
+            font.family: stats.theme.fontFamily
+            font.pixelSize: stats.theme.fontDisplay
+            font.weight: Font.Bold
+            anchors.verticalCenter: parent.verticalCenter
+          }
+        }
+        GameButton {
+          id: resetButton
+          anchors.right: parent.right
+          anchors.verticalCenter: parent.verticalCenter
+          theme: stats.theme
+          variant: "ghost"
+          icon: "replay"
+          text: stats.tr("stats.reset")
+          visible: stats.s.gamesPlayed > 0
+          onClicked: stats.resetRequested()
         }
       }
 

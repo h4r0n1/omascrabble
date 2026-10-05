@@ -282,6 +282,11 @@ export const FR = {
   "end.newGame": "NOUVELLE PARTIE",
 
   // ---------------------------------------------------------------- stats
+  "stats.reset": "Réinitialiser",
+  "confirm.resetStats.title": "Réinitialiser les statistiques ?",
+  "confirm.resetStats.message": "Toutes les statistiques et tous les records seront remis à zéro. Les parties archivées ne sont pas supprimées.",
+  "confirm.resetStats.button": "Réinitialiser",
+  "notice.statsReset": "Statistiques réinitialisées.",
   "stats.title": "Statistiques",
   "stats.empty": "Aucune partie terminée pour l’instant. Vos statistiques apparaîtront ici.",
   "stats.games": "Parties",

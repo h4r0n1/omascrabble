@@ -107,6 +107,13 @@ Item {
     if (directoryReady) statsFile.setText(JSON.stringify(stats))
   }
 
+  // Clears every statistic. The previous file is kept as stats-backup.json
+  // (one copy, replaced at each reset); archived games are not touched.
+  function resetStats() {
+    if (directoryReady) statsBackupFile.setText(JSON.stringify(stats))
+    saveStats(Stats.emptyStats())
+  }
+
   function recordFinishedGame(state, me) {
     try {
       var summary = Stats.summarizeGame(state, me)
@@ -197,6 +204,15 @@ Item {
     printErrors: false
     onLoaded: saves.applyStatsText(text())
     onLoadFailed: function(err) { saves.applyStatsText("") }
+  }
+
+  FileView {
+    id: statsBackupFile
+    path: saves.directoryReady ? saves.stateDir + "/stats-backup.json" : ""
+    atomicWrites: true
+    blockWrites: true
+    printErrors: false
+    preload: false
   }
 
   FileView {

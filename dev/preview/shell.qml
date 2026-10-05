@@ -243,7 +243,12 @@ ShellRoot {
           if (Quickshell.env("PREVIEW_DEFS_INSTALL") !== "") app.definitions.install(Quickshell.env("PREVIEW_DEFS_INSTALL"))
           if (Quickshell.env("PREVIEW_DEFS_REMOVE") !== "") Qt.callLater(function() { app.definitions.remove(Quickshell.env("PREVIEW_DEFS_REMOVE")) })
         }
-        if (sc === "stats") view.overlay = "stats"
+        if (sc === "stats") {
+          if (c.isActive) c.resign()
+          view.overlay = "stats"
+          if (Quickshell.env("PREVIEW_RESET") === "ask") view.askResetStats()
+          if (Quickshell.env("PREVIEW_RESET") === "done") { app.saves.resetStats(); app.controller.say(view.tr("notice.statsReset"), "info") }
+        }
         if (sc === "end") { if (c.isActive) c.resign() }
         if (sc === "joker") c.jokerRequest = { tileId: 0, row: 0, col: 0 }
         if (sc === "exchange") view.openExchange()
