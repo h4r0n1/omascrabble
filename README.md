@@ -4,6 +4,15 @@ A classic Scrabble game, in French or English, for **Omarchy Quattro**, built as
 `omarchy-shell` panel plugin: QML/QtQuick inside the shell you already run, no
 browser, no Electron, no server, fully offline.
 
+<p align="center">
+  <img src="preview.png" alt="A French game in practice mode: the board, the rack, a suggested move, the score panel and the move history" width="900">
+</p>
+
+```bash
+omarchy plugin add https://github.com/h4r0n1/omascrabble.git --enable
+omarchy-shell shell toggle omascrabble
+```
+
 - Classic rules: 15 × 15 board, premium squares, jokers, crossing words, the
   50-point bingo bonus, exchanges, passes, challenges, clocks, end-of-game
   adjustments.
@@ -23,6 +32,21 @@ browser, no Electron, no server, fully offline.
 > Independent community project. SCRABBLE® is a trademark of its respective
 > owners; this game is neither affiliated with nor endorsed by them, and uses
 > no official artwork.
+
+## Screenshots
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/home.png" alt="Home screen with the OMA SCRABBLE tile logo"><br><sub>Home screen</sub></td>
+    <td width="50%"><img src="docs/screenshots/english.png" alt="An English game in practice mode, with a bingo suggestion"><br><sub>An English game (practice mode)</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/screenshots/definitions.png" alt="Definitions dialog showing Wiktionnaire entries for the words of a move"><br><sub>Word definitions (optional pack)</sub></td>
+    <td width="50%"><img src="docs/screenshots/settings.png" alt="Settings with a sidebar of sections"><br><sub>Settings</sub></td>
+  </tr>
+</table>
+
+All screenshots follow the active Omarchy theme.
 
 ## 1. Requirements
 
