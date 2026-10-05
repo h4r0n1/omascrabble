@@ -37,7 +37,7 @@ browser, no Electron, no server, fully offline.
   `tools/download-definitions.py`.
 - Development only: Node 18+ (tests, dictionary build), Python 3 (sound
   generation).
-- No `sudo`, no system packages, no services. The plugin writes only to
+- No sudo or pkexec is required, and nothing is installed system-wide. The plugin writes only to
   `~/.local/state/omascrabble` (saves, settings, statistics) and, if you
   download definitions, `~/.local/share/omascrabble`.
 
