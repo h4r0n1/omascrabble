@@ -43,12 +43,13 @@ FocusScope {
   function saveName(text) {
     if (!saves) return
     var next = JSON.parse(JSON.stringify(settings))
-    next.online = Object.assign({}, settings.online, { name: text.trim().slice(0, 24) })
+    next.online = Object.assign({}, settings.online, { name: text.slice(0, 24) })
     saves.saveSettings(next)
   }
 
   onVisibleChanged: if (visible) {
     copied = false
+    nameField.text = settings && settings.online ? settings.online.name : ""
     if (online) { online.start(); online.hello() }
     Qt.callLater(function() { (mode === "join" ? linkField : nameField).forceActiveFocus() })
   }
@@ -164,7 +165,10 @@ FocusScope {
             id: nameField
             width: Math.min(320, parent.width)
             theme: page.theme
-            text: page.online ? page.online.playerName : ""
+            // Loaded when the screen opens, then left to the player: a live
+            // binding would put the default name back when the field is
+            // emptied and swallow spaces as they're typed.
+            placeholder: page.online ? page.online.systemUser : ""
             onEdited: function(t) { page.saveName(t) }
           }
           Text {

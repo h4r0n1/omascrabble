@@ -19,10 +19,10 @@ omarchy-shell shell toggle omascrabble
 - Two game languages, chosen per game: French (102 tiles, French values, an
   open French word list) or English (100 tiles, English values, an open
   English word list).
-- Four modes: against the computer, two players at one keyboard, solo
-  practice (hints and "best possible move" after each turn), and **online**
-  with a friend on another computer — invited by a link, no server, no
-  account, no referee (optional add-on, see *Online play*). A
+- Three modes: against the computer, solo practice (hints and "best possible
+  move" after each turn), and **online** with a friend on another computer —
+  invited by a link or from your friends list, no server, no account, no
+  referee (optional add-on, see *Online play*). A
   computer-vs-computer demonstration is available over IPC.
 - A real algorithmic AI (no LLM) at four levels — Beginner, Casual, Expert,
   Champion — that sees only what a player may see, with rack values tuned for

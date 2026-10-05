@@ -152,7 +152,9 @@ export function normalizeSettings(input) {
     },
     shortcuts: shortcuts,
     online: {
-      name: typeof obj(src.online).name === "string" ? obj(src.online).name.trim().slice(0, 24) : "",
+      // Not trimmed here: this runs on every keystroke of the name field,
+      // and trimming would swallow a space as it's typed. Users trim it.
+      name: typeof obj(src.online).name === "string" ? obj(src.online).name.replace(/^\s+/, "").slice(0, 24) : "",
       listen: bool(obj(src.online).listen, d.online.listen),
       knownFriends: bool(obj(src.online).knownFriends, d.online.knownFriends)
     }

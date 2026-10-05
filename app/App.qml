@@ -54,8 +54,8 @@ Item {
   OnlineService {
     id: onlineService
     pluginDir: app.pluginDir
-    playerName: saveManager.settings.online.name || systemUser
-    readonly property string systemUser: {
+    playerName: saveManager.settings.online.name.trim() || systemUser
+    systemUser: {
       var u = Quickshell.env("USER") || ""
       return u ? u.charAt(0).toUpperCase() + u.slice(1) : ""
     }

@@ -39,7 +39,7 @@ FocusScope {
 
   function reset() {
     var n = settings && settings.newGame ? settings.newGame : {}
-    mode = n.mode || "human_vs_ai"
+    mode = n.mode && n.mode !== "human_vs_human" ? n.mode : "human_vs_ai"
     difficulty = settings && settings.ai ? settings.ai.difficulty : "casual"
     timeMinutes = n.timeMinutes !== undefined ? n.timeMinutes : 20
     gameLanguage = n.gameLanguage || "fr"
@@ -102,7 +102,9 @@ FocusScope {
         theme: setup.theme
         title: setup.tr("setup.mode")
         value: setup.mode
-        options: ["human_vs_ai", "human_vs_human", "practice", "online"].map(function(m) {
+        // Two players on one machine is no longer offered (online play
+        // replaced it); saved two-player games still load and play.
+        options: ["human_vs_ai", "practice", "online"].map(function(m) {
           return { value: m, label: setup.tr("mode." + m), detail: setup.tr("setup.mode." + m + ".detail") }
         })
         onPicked: function(v) { setup.mode = v }

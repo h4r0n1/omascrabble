@@ -12,6 +12,7 @@ Item {
 
   property string pluginDir: ""
   property string playerName: ""
+  property string systemUser: ""     // the name used when none is set
 
   // "" until the helper answered; then "tox", "tcp" or "none" (toxcore
   // missing: online play unavailable).

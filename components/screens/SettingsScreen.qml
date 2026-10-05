@@ -310,7 +310,6 @@ FocusScope {
             theme: page.theme
             title: page.tr("settings.group.game")
             ToggleRow { width: parent.width; theme: page.theme; label: page.tr("settings.sounds"); detail: page.tr("settings.sounds.detail"); checked: page.s.gameplay.sounds; onToggled: function(v) { page.set("gameplay.sounds", v) } }
-            ToggleRow { width: parent.width; theme: page.theme; label: page.tr("settings.hideRack"); checked: page.s.gameplay.hideRackBetweenTurns; onToggled: function(v) { page.set("gameplay.hideRackBetweenTurns", v) } }
             ToggleRow { width: parent.width; theme: page.theme; label: page.tr("settings.pauseClock"); checked: page.s.gameplay.pauseClockWhenHidden; onToggled: function(v) { page.set("gameplay.pauseClockWhenHidden", v) } }
           }
         }
@@ -541,10 +540,18 @@ FocusScope {
               font.weight: Font.DemiBold
             }
             NameField {
+              id: onlineName
               width: Math.min(320, parent.width)
               theme: page.theme
-              text: page.s.online.name || (page.online ? page.online.playerName : "")
-              onEdited: function(t) { page.set("online.name", t.trim().slice(0, 24)) }
+              placeholder: page.online ? page.online.systemUser : ""
+              onEdited: function(t) { page.set("online.name", t.slice(0, 24)) }
+              // Loaded when the page shows, not bound: see OnlineScreen.
+              Connections {
+                target: page
+                function onCurrentChanged() { if (page.current === "online") onlineName.text = page.s.online.name }
+                function onVisibleChanged() { if (page.visible && page.current === "online") onlineName.text = page.s.online.name }
+              }
+              Component.onCompleted: text = page.s.online.name
             }
             Text {
               text: page.tr("online.name.detail")
