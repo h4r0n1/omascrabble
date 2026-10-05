@@ -176,7 +176,7 @@ Column {
         readOnly: true
         selectByMouse: true
         wrapMode: TextEdit.WrapAnywhere
-        text: "python3 ~/.config/omarchy/plugins/omascrabble/tools/install-definitions.py" + (pack.language === "en" ? " --lang en" : "")
+        text: "python3 ~/.config/omarchy/plugins/omascrabble/tools/download-definitions.py" + (pack.language === "en" ? " --lang en" : "")
         color: pack.theme.muted
         font.family: pack.theme.fontFamily
         font.pixelSize: pack.theme.fontCaption

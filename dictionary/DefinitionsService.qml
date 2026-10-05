@@ -4,7 +4,7 @@ import Quickshell.Io
 import "normalize.mjs" as Normalize
 
 // Optional word definitions (Wiktionary, CC BY-SA 4.0), installed per game
-// language by tools/install-definitions.py into
+// language by tools/download-definitions.py into
 // $XDG_DATA_HOME/omascrabble/definitions/<lang> as small JSON shards. Shards
 // are read on demand, asynchronously, and treated as untrusted data: parsed,
 // checked, never executed.
@@ -63,7 +63,7 @@ Item {
     installer.lastError = null
     installer.cancelled = false
     installer.command = ["sh", "-c", 'command -v python3 >/dev/null 2>&1 || exit 127; exec python3 "$@"', "install",
-                         pluginDir + "/tools/install-definitions.py", "--lang", lang, "--progress-json"]
+                         pluginDir + "/tools/download-definitions.py", "--lang", lang, "--progress-json"]
     installer.running = true
     return true
   }

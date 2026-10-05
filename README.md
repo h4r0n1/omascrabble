@@ -28,21 +28,30 @@ browser, no Electron, no server, fully offline.
 
 - Omarchy 4 (Quattro) with its `omarchy-shell` (Quickshell, Qt 6). Tested on
   Omarchy 4.0.4, Quickshell 0.3, Qt 6.11.
-- Nothing else for play. Sounds use QtMultimedia, which a stock Omarchy
-  already has; without it the game simply stays silent.
+- Nothing else for play: no network, no extra packages. Sounds use
+  QtMultimedia, which a stock Omarchy already has; without it the game simply
+  stays silent.
+- Optional word definitions: `python3` (standard library only, present on a
+  stock Omarchy) and a one-time download from kaikki.org (Wiktionary data,
+  CC BY-SA 4.0), started only when you click *Download* or run
+  `tools/download-definitions.py`.
 - Development only: Node 18+ (tests, dictionary build), Python 3 (sound
   generation).
+- No `sudo`, no system packages, no services. The plugin writes only to
+  `~/.local/state/omascrabble` (saves, settings, statistics) and, if you
+  download definitions, `~/.local/share/omascrabble`.
 
 ## 2. Installation
 
 ```bash
-omarchy plugin add <repository-url>
+omarchy plugin add https://github.com/h4r0n1/omascrabble.git --enable
 ```
 
 `omarchy plugin add` clones the repository into
-`~/.config/omarchy/plugins/omascrabble`, validates the manifest and asks
-before enabling. A local checkout works as the URL too
-(`omarchy plugin add ~/Work/omascrabble`).
+`~/.config/omarchy/plugins/omascrabble` and validates the manifest; without
+`--enable` it asks before enabling. A local checkout works as the URL too.
+Installing changes nothing else on the system: the keybinding and menu entry
+below are optional and added by you.
 
 ## 3. Enabling and opening
 
@@ -78,9 +87,11 @@ omarchy plugin disable omascrabble
 ```bash
 omarchy plugin remove omascrabble
 rm -rf ~/.local/state/omascrabble          # saved game, settings, statistics
+rm -rf ~/.local/share/omascrabble          # downloaded definitions, if any
 ```
 
-Remove the keybinding or menu entry you added by hand.
+Remove the keybinding or menu entry you added by hand, if any. Nothing else
+is left behind.
 
 ## Updating
 
@@ -217,8 +228,8 @@ offline.
 The same thing from a terminal:
 
 ```bash
-python3 ~/.config/omarchy/plugins/omascrabble/tools/install-definitions.py            # French
-python3 ~/.config/omarchy/plugins/omascrabble/tools/install-definitions.py --lang en  # English
+python3 ~/.config/omarchy/plugins/omascrabble/tools/download-definitions.py            # French
+python3 ~/.config/omarchy/plugins/omascrabble/tools/download-definitions.py --lang en  # English
 ```
 
 ## 9. Configuration

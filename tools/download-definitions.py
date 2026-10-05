@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Builds an optional definitions pack for Omascrabble.
 
-    python3 tools/install-definitions.py               # French (Wiktionnaire)
-    python3 tools/install-definitions.py --lang en     # English (Wiktionary)
-    python3 tools/install-definitions.py --source extract.jsonl[.gz]
-    python3 tools/install-definitions.py --progress-json   # for the game's UI
+    python3 tools/download-definitions.py               # French (Wiktionnaire)
+    python3 tools/download-definitions.py --lang en     # English (Wiktionary)
+    python3 tools/download-definitions.py --source extract.jsonl[.gz]
+    python3 tools/download-definitions.py --progress-json   # for the game's UI
 
 The game runs this script itself when you click "Download" (with
 --progress-json: one JSON object per line on stdout, see emit()); it can also
