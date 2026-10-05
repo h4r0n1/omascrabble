@@ -196,6 +196,31 @@ Item {
     onLoadFailed: function(err) { service.setPack(lang, null) }
   }
   ManifestFile { id: frManifest; lang: "fr" }
+
+  // Version 0.1 kept the (French-only) pack directly in definitions/. Move it
+  // into definitions/fr once, without deleting anything; resumes if a
+  // previous move was interrupted.
+  Process {
+    id: legacyMigration
+    command: ["sh", "-c", [
+      'd="$1"; tmp="$d/.migrate-fr"',
+      '[ -e "$d/fr" ] && exit 0',
+      'if [ ! -d "$tmp" ]; then',
+      '  [ -f "$d/manifest.json" ] || exit 0',
+      '  grep -q \'"omascrabble-definitions"\' "$d/manifest.json" || exit 0',
+      '  grep -q \'"language": *"en"\' "$d/manifest.json" && exit 0',
+      '  mkdir -- "$tmp" || exit 1',
+      'fi',
+      'find "$d" -maxdepth 1 -type f -name "*.json" -exec mv -t "$tmp" -- {} + || exit 1',
+      'mv -T -- "$tmp" "$d/fr" && echo migrated'
+    ].join("\n"), "migrate", service.baseDir]
+    stdout: StdioCollector {
+      waitForEnd: true
+      onStreamFinished: if (String(text).indexOf("migrated") !== -1) console.log("omascrabble: moved the French definitions into " + service.dirFor("fr"))
+    }
+    onExited: function(exitCode, exitStatus) { service.refresh() }
+  }
+  Component.onCompleted: legacyMigration.running = true
   ManifestFile { id: enManifest; lang: "en" }
 
   Process {

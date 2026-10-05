@@ -6,6 +6,7 @@
 #   env: PREVIEW_THEME=<omarchy theme name>  PREVIEW_APPEARANCE=omarchy|light|dark
 #        PREVIEW_LANG=fr|en (interface)  PREVIEW_GAMELANG=fr|en (game)
 #        PREVIEW_DEFS=<French pack dir>  PREVIEW_DEFS_EN=<English pack dir>
+#        PREVIEW_DEFS_LEGACY=<pack dir> (0.1 layout: copied into definitions/)
 #        PREVIEW_DEFS_INSTALL=fr|en (scenario defs: start a download; set
 #        OMASCRABBLE_DEFINITIONS_SOURCE to a small local extract)
 #        PREVIEW_DEFS_REMOVE=fr|en (scenario defs: remove that pack)
@@ -33,6 +34,9 @@ ln -s "$repo" "$work/config/plugin"
 cp "$repo/dev/preview/shell.qml" "$work/config/shell.qml"
 if [[ -n ${PREVIEW_DEFS:-} ]]; then
   mkdir -p "$work/data/omascrabble/definitions" && cp -r "$PREVIEW_DEFS" "$work/data/omascrabble/definitions/fr"
+fi
+if [[ -n ${PREVIEW_DEFS_LEGACY:-} ]]; then
+  mkdir -p "$work/data/omascrabble/definitions" && cp -r "$PREVIEW_DEFS_LEGACY"/. "$work/data/omascrabble/definitions/"
 fi
 if [[ -n ${PREVIEW_DEFS_EN:-} ]]; then
   mkdir -p "$work/data/omascrabble/definitions" && cp -r "$PREVIEW_DEFS_EN" "$work/data/omascrabble/definitions/en"
