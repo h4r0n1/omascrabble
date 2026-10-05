@@ -32,13 +32,17 @@ FocusScope {
     if (!info) return ""
     if (g.players.length === 1) return tr("end.gameOver")
     if (info.winner === null) return tr("end.draw")
-    if (g.mode === "human_vs_ai") return tr(info.winner === me ? "end.victory" : "end.defeat")
+    if (g.mode === "human_vs_ai" || g.mode === "online") return tr(info.winner === me ? "end.victory" : "end.defeat")
     if (g.mode === "ai_vs_ai") return tr("end.winsDemo", { name: name(info.winner) })
     return tr("end.winsNamed", { name: name(info.winner) })
   }
 
   // Default labels ("Vous", "Ordinateur") need real sentences.
-  function isYou(index) { return g && g.mode !== "human_vs_human" && g.players[index] && g.players[index].kind === "human" }
+  function isYou(index) {
+    if (!g || !g.players[index]) return false
+    if (g.mode === "online") return index === me
+    return g.mode !== "human_vs_human" && g.players[index].kind === "human"
+  }
   function isComputer(index) { return g && g.players[index] && g.players[index].kind === "ai" }
 
   function reason() {
@@ -284,7 +288,7 @@ FocusScope {
       spacing: end.theme.space
       GameButton { theme: end.theme; text: end.tr("common.close"); variant: "ghost"; onClicked: end.closeRequested() }
       GameButton { theme: end.theme; text: end.tr("end.replay"); icon: "replay"; variant: "secondary"; onClicked: end.replayRequested() }
-      GameButton { theme: end.theme; text: end.tr("end.rematch"); variant: "secondary"; visible: !!end.g && end.g.mode !== "practice" && end.g.mode !== "ai_vs_ai"; onClicked: end.rematchRequested() }
+      GameButton { theme: end.theme; text: end.tr("end.rematch"); variant: "secondary"; visible: !!end.g && end.g.mode !== "practice" && end.g.mode !== "ai_vs_ai" && end.g.mode !== "online"; onClicked: end.rematchRequested() }
       GameButton { theme: end.theme; text: end.tr("end.newGame"); variant: "primary"; onClicked: end.newGameRequested() }
     }
   }

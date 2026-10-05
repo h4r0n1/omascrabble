@@ -91,8 +91,11 @@ Item {
           id: face
           theme: rack.theme
           size: rack.tileSize
-          letter: slot.t ? (slot.t.isJoker ? "?" : slot.t.letter) : ""
+          // A tile still being dealt (online) shows blank until it's revealed.
+          letter: slot.t && !slot.t.hidden ? (slot.t.isJoker ? "?" : slot.t.letter) : ""
           points: slot.t ? slot.t.points : 0
+          showPoints: !(slot.t && slot.t.hidden)
+          opacity: slot.t && slot.t.hidden ? 0.55 : 1
           joker: slot.t ? slot.t.isJoker : false
           selected: slot.selected
           highlight: slot.marked

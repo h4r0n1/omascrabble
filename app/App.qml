@@ -1,4 +1,5 @@
 import QtQuick
+import Quickshell
 import "../storage"
 import "../dictionary"
 import "../controller"
@@ -19,6 +20,7 @@ Item {
   readonly property alias preferences: systemPreferences
   readonly property alias sounds: soundPlayer
   readonly property alias definitions: definitionsService
+  readonly property alias online: onlineService
 
   SaveManager {
     id: saveManager
@@ -45,7 +47,31 @@ Item {
     dictionary: dictionaryService
     saves: saveManager
     worker: worker
+    online: onlineService
     windowActive: app.windowVisible
+  }
+
+  OnlineService {
+    id: onlineService
+    pluginDir: app.pluginDir
+    playerName: saveManager.settings.online.name || systemUser
+    readonly property string systemUser: {
+      var u = Quickshell.env("USER") || ""
+      return u ? u.charAt(0).toUpperCase() + u.slice(1) : ""
+    }
+    onEvent: function(ev) { gameController.onOnlineEvent(ev) }
+  }
+
+  // An online game carries on in the background: reconnect as soon as the
+  // word list is ready, so the other player's moves arrive even before the
+  // game screen is opened.
+  Connections {
+    target: dictionaryService
+    function onReady() {
+      var saved = saveManager.savedGame
+      if (saved && saved.mode === "online" && saved.status === "active" && !gameController.hasGame)
+        gameController.resume(saved, saveManager.savedExtras)
+    }
   }
 
   SystemPreferences { id: systemPreferences }

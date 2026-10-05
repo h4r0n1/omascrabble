@@ -15,6 +15,7 @@ FocusScope {
   signal newGameRequested()
   signal statsRequested()
   signal settingsRequested()
+  signal joinRequested()
 
   readonly property var saved: saves ? saves.savedGame : null
   readonly property bool canResume: !!saved && saved.status === "active"
@@ -165,6 +166,7 @@ FocusScope {
         Row {
           anchors.horizontalCenter: parent.horizontalCenter
           spacing: home.theme.space
+          GameButton { theme: home.theme; variant: "ghost"; text: home.tr("home.join"); icon: "play"; onClicked: home.joinRequested() }
           GameButton { theme: home.theme; variant: "ghost"; text: home.tr("home.stats"); icon: "stats"; onClicked: home.statsRequested() }
           GameButton { theme: home.theme; variant: "ghost"; text: home.tr("home.settings"); icon: "settings"; onClicked: home.settingsRequested() }
         }

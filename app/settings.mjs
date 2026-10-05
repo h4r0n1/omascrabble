@@ -59,7 +59,10 @@ export const DEFAULT_SETTINGS = Object.freeze({
     firstPlayer: "human",
     playerNames: Object.freeze(["Joueur 1", "Joueur 2"])
   }),
-  shortcuts: DEFAULT_SHORTCUTS
+  shortcuts: DEFAULT_SHORTCUTS,
+  online: Object.freeze({
+    name: ""                  // shown to the other player; "" = the system user name
+  })
 })
 
 const ENUMS = {
@@ -68,7 +71,7 @@ const ENUMS = {
   animation: ["auto", "full", "reduced", "off"],
   difficulty: ["beginner", "casual", "expert", "champion"],
   personality: ["balanced", "aggressive", "cautious"],
-  mode: ["human_vs_ai", "human_vs_human", "practice"],
+  mode: ["human_vs_ai", "human_vs_human", "practice", "online"],
   validation: ["immediate", "challenge"],
   challengePenalty: ["none", "points", "lose_turn"],
   firstPlayer: ["human", "ai", "random"]
@@ -145,7 +148,10 @@ export function normalizeSettings(input) {
         return typeof v === "string" && v.trim().length > 0 ? v.trim().slice(0, 24) : d.newGame.playerNames[i]
       })
     },
-    shortcuts: shortcuts
+    shortcuts: shortcuts,
+    online: {
+      name: typeof obj(src.online).name === "string" ? obj(src.online).name.trim().slice(0, 24) : ""
+    }
   }
 }
 

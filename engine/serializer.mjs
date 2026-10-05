@@ -83,20 +83,28 @@ export function serializeGame(state) {
     rules: state.rules,
     tiles: state.tiles,
     rng: state.rng,
-    settings: state.settings
+    settings: state.settings,
+    online: state.online || null
   }
   return JSON.stringify(doc)
 }
 
-function validateTiles(tiles) {
-  check(Array.isArray(tiles) && tiles.length >= 2 && tiles.length <= 200, "tiles")
+// Online games carry hidden tiles (letter not known to this player) and
+// retired ones (replaced by a reshuffle); their handles grow with every
+// reshuffle, hence the higher limit.
+function validateTiles(tiles, online) {
+  check(Array.isArray(tiles) && tiles.length >= 2 && tiles.length <= (online ? 5000 : 200), "tiles")
   return tiles.map(function(t, i) {
     check(isObj(t) && t.id === i, "tile id " + i)
+    if (online && t.hidden === true) return { id: i, letter: null, points: 0, isJoker: false, hidden: true, retired: t.retired === true }
+    if (online) check(isInt(t.index) && t.index >= 0 && t.index < 200, "tile index " + i)
     check(typeof t.isJoker === "boolean", "tile isJoker " + i)
     check(t.isJoker ? t.letter === "?" : (typeof t.letter === "string" && /^[A-Z]$/.test(t.letter)), "tile letter " + i)
     check(isInt(t.points) && t.points >= 0 && t.points <= 50, "tile points " + i)
     check(!t.isJoker || t.points === 0, "joker points " + i)
-    return { id: t.id, letter: t.letter, points: t.points, isJoker: t.isJoker }
+    const out = { id: t.id, letter: t.letter, points: t.points, isJoker: t.isJoker }
+    if (online) out.index = t.index
+    return out
   })
 }
 
@@ -132,7 +140,12 @@ function validateMoves(moves, playerCount, tileCount) {
 function buildState(doc) {
   check(isStr(doc.gameId, 100) && doc.gameId.length > 0, "gameId")
   check(Object.keys(MODE).map(function(k) { return MODE[k] }).indexOf(doc.mode) !== -1, "mode")
-  const tiles = validateTiles(doc.tiles)
+  let online = null
+  if (doc.mode === MODE.ONLINE) {
+    check(isObj(doc.online) && (doc.online.seat === 0 || doc.online.seat === 1), "online")
+    online = { seat: doc.online.seat, peerName: isStr(doc.online.peerName, 40) ? doc.online.peerName : "" }
+  }
+  const tiles = validateTiles(doc.tiles, !!online)
   const n = tiles.length
   const rules = normalizeRules(doc.rules)
 
@@ -173,7 +186,7 @@ function buildState(doc) {
 
   const bag = validIdList(doc.bag, n, "bag")
   for (const id of bag) seen[id]++
-  for (let i = 0; i < n; i++) check(seen[i] === 1, "tile " + i + " appears " + seen[i] + " times")
+  for (let i = 0; i < n; i++) check(seen[i] === (tiles[i].retired ? 0 : 1), "tile " + i + " appears " + seen[i] + " times")
 
   check(isObj(doc.turn) && isInt(doc.turn.current) && doc.turn.current >= 0 && doc.turn.current < pc, "turn")
   check(isInt(doc.turn.number) && doc.turn.number >= 1, "turn number")
@@ -197,6 +210,7 @@ function buildState(doc) {
     const e = doc.end
     const reasons = Object.keys(END_REASON).map(function(k) { return END_REASON[k] })
     check(isObj(e) && reasons.indexOf(e.reason) !== -1, "end")
+    check(!e.awaitingReveal || online, "end awaiting reveal")
     check(Array.isArray(e.finalScores) && e.finalScores.length === pc && e.finalScores.every(isInt), "end scores")
     check(e.winner === null || (isInt(e.winner) && e.winner >= 0 && e.winner < pc), "end winner")
     end = e
@@ -229,7 +243,8 @@ function buildState(doc) {
     pending: pending,
     status: doc.status,
     end: end,
-    settings: isObj(doc.settings) ? doc.settings : {}
+    settings: isObj(doc.settings) ? doc.settings : {},
+    online: online
   }
 }
 

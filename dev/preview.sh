@@ -11,6 +11,9 @@
 #        OMASCRABBLE_DEFINITIONS_SOURCE to a small local extract)
 #        PREVIEW_DEFS_REMOVE=fr|en (scenario defs: remove that pack)
 #        PREVIEW_SECTION=<id> (scenario settings: page to open)
+#        PREVIEW_TIMEOUT=<s> (default 60)
+#        scenarios online-host / online-guest: two processes play each other
+#        over the real helper (OMASCRABBLE_TRANSPORT=tcp, PREVIEW_LINK_FILE)
 #        PREVIEW_STEPS=<n> (snapshot after n × 100 ms, default 14)
 #
 # It runs a separate, short-lived Quickshell process on the offscreen platform:
@@ -48,7 +51,7 @@ fi
 
 PREVIEW_SCENARIO="$scenario" PREVIEW_OUTPUT="$output" PREVIEW_WIDTH="$width" PREVIEW_HEIGHT="$height" \
 PREVIEW_PLUGIN="$repo" PREVIEW_HC="${PREVIEW_HC:-}" PREVIEW_LANG="${PREVIEW_LANG:-}" PREVIEW_GAMELANG="${PREVIEW_GAMELANG:-}" PREVIEW_DEFS_INSTALL="${PREVIEW_DEFS_INSTALL:-}" PREVIEW_DEFS_REMOVE="${PREVIEW_DEFS_REMOVE:-}" PREVIEW_STEPS="${PREVIEW_STEPS:-}" PREVIEW_SECTION="${PREVIEW_SECTION:-}" PREVIEW_RESET="${PREVIEW_RESET:-}" XDG_STATE_HOME="$work/state" XDG_DATA_HOME="$work/data" \
-QT_QPA_PLATFORM=offscreen timeout 60 quickshell -p "$work/config" 2>&1 \
+QT_QPA_PLATFORM=offscreen timeout "${PREVIEW_TIMEOUT:-60}" quickshell -p "$work/config" 2>&1 \
   | grep -v -e "WAYLAND_DISPLAY" -e "QT_QPA_PLATFORM" -e "actually running" -e "--- WARNING" -e "window masks" || true
 
 [[ $scenario == corrupt ]] && ls "$work/state/omascrabble/quarantine" 2>/dev/null | sed 's/^/quarantined: /'

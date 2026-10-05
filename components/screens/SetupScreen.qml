@@ -102,7 +102,7 @@ FocusScope {
         theme: setup.theme
         title: setup.tr("setup.mode")
         value: setup.mode
-        options: ["human_vs_ai", "human_vs_human", "practice"].map(function(m) {
+        options: ["human_vs_ai", "human_vs_human", "practice", "online"].map(function(m) {
           return { value: m, label: setup.tr("mode." + m), detail: setup.tr("setup.mode." + m + ".detail") }
         })
         onPicked: function(v) { setup.mode = v }
@@ -184,7 +184,7 @@ FocusScope {
       }
 
       ChoiceGroup {
-        visible: setup.mode !== "practice"
+        visible: setup.mode !== "practice" && setup.mode !== "online"
         width: parent.width
         theme: setup.theme
         title: setup.tr("setup.first")
@@ -234,7 +234,7 @@ FocusScope {
       GameButton {
         theme: setup.theme
         variant: "primary"
-        text: setup.tr(setup.dictionary && setup.dictionary.status === "loading" ? "setup.loading" : "setup.start")
+        text: setup.tr(setup.mode === "online" ? "setup.invite" : setup.dictionary && setup.dictionary.status === "loading" ? "setup.loading" : "setup.start")
         enabled: !!setup.dictionary && setup.dictionary.status !== "loading"
         shortcutHint: setup.tr("setup.startShortcut")
         onClicked: setup.start()

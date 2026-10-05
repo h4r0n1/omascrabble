@@ -13,7 +13,7 @@ export function emptyStats() {
   return {
     version: STATS_VERSION,
     gamesPlayed: 0,
-    byMode: { human_vs_ai: 0, human_vs_human: 0, practice: 0 },
+    byMode: { human_vs_ai: 0, human_vs_human: 0, practice: 0, online: 0 },
     wins: 0,
     losses: 0,
     draws: 0,

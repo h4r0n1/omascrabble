@@ -52,12 +52,95 @@ ShellRoot {
         dictionary: app.dictionary
         sounds: app.sounds
         definitions: app.definitions
+        online: app.online
         systemPrefersDark: app.preferences.prefersDark
       }
     }
   }
 
   property int step: 0
+
+  // ---------------------------------------------------------- online
+  // online-host / online-guest: two harness processes play a whole game
+  // against each other through the real helper. The host writes its link to
+  // PREVIEW_LINK_FILE; the guest reads it there.
+  readonly property bool onlineScenario: scenario === "online-host" || scenario === "online-guest"
+  property string onlineStage: "start"
+  property int onlineTicks: 0
+  property int onlineMoves: 0
+  FileView {
+    id: linkFile
+    path: Quickshell.env("PREVIEW_LINK_FILE") || ""
+    printErrors: false
+    blockLoading: true
+  }
+  function onlineLog(what) { console.log("ONLINE " + rootShell.scenario + " " + what) }
+  function onlineTick() {
+    var c = app.controller
+    onlineTicks++
+    if (onlineTicks > 3000) { onlineLog("TIMEOUT stage=" + onlineStage); shot(); onlineStage = "done"; return }
+    if (onlineStage === "start") {
+      if (!app.saves.ready || app.dictionary.status !== "ready") return
+      app.saves.saveSettings(Object.assign({}, app.saves.settings, { online: { name: scenario === "online-host" ? "Ana" : "Ben" } }))
+      if (scenario === "online-host") {
+        view.openOnline("invite")
+        app.online.invite({ mode: "online", gameLanguage: "fr", dictionary: "open-fr", timeMinutes: 0, validation: "immediate", challengePenalty: "none" })
+        onlineStage = "invited"
+      } else {
+        view.openOnline("join")
+        onlineStage = "waitlink"
+      }
+      return
+    }
+    if (onlineStage === "invited" && app.online.link !== "") { linkFile.setText(app.online.link); onlineLog("link " + app.online.link); onlineStage = "waitgame" }
+    if (onlineStage === "waitlink") {
+      linkFile.reload()
+      var text = String(linkFile.text() || "").trim()
+      if (text.indexOf("omascrabble://") === 0) { app.online.join(text, 102); onlineStage = "waitproposal" }
+      return
+    }
+    if (onlineStage === "waitproposal" && app.online.stage === "proposal") {
+      onlineLog("proposal from " + app.online.proposal.from)
+      onlineScreen().acceptRequested(app.online.proposal.config)
+      onlineStage = "waitgame"
+      return
+    }
+    if (onlineStage === "waitgame") {
+      if (c.isOnline && c.isActive && !c.rackRevealing) { onlineLog("started seat=" + c.viewer + " first=" + c.game.current); onlineStage = "play" }
+      return
+    }
+    if (onlineStage === "play") {
+      if (c.onlineProblem) { onlineLog("PROBLEM " + JSON.stringify(c.onlineProblem)); shot(); onlineStage = "done"; return }
+      if (c.isOver && !c.game.end.awaitingReveal) {
+        onlineLog("DONE moves=" + c.game.moves.length + " scores=" + JSON.stringify(c.game.end.finalScores) + " fp=" + Engine.fingerprint(c.game))
+        onlineStage = "done"
+        Qt.callLater(shot)
+        return
+      }
+      if (!c.humanTurn) return
+      var me = c.viewer
+      var action
+      if (onlineMoves % 5 === 4 && c.game.bag.length >= 7) action = { type: "exchange", player: me, tileIds: c.game.players[me].rack.slice(0, 2) }
+      else action = AI.chooseAction(Engine.publicView(c.game, me), "casual", app.dictionary.provider.graph(), { deadline: Date.now() + 60 }).action
+      // Keep the test short: resign after 24 of my moves.
+      if (onlineMoves >= 24) action = { type: "resign", player: me }
+      var res = c.applyGameAction(action)
+      if (!res.ok) c.applyGameAction({ type: "pass", player: me })
+      onlineMoves++
+      onlineLog("move " + onlineMoves + " " + action.type + " fp=" + Engine.fingerprint(c.game))
+      if (onlineMoves === Number(Quickshell.env("PREVIEW_ONLINE_STOP") || -1)) { onlineStage = "done"; Qt.callLater(shot) }
+    }
+  }
+  function onlineScreen() {
+    for (var i = 0; i < view.children.length; i++) if (view.children[i].acceptRequested !== undefined) return view.children[i]
+    return null
+  }
+  Timer {
+    interval: 100
+    repeat: true
+    running: rootShell.onlineScenario && rootShell.onlineStage !== "done"
+    onTriggered: rootShell.onlineTick()
+  }
 
   function placePending(letters) {
     var c = app.controller
@@ -214,6 +297,7 @@ ShellRoot {
     running: true
     onTriggered: {
       var c = app.controller
+      if (rootShell.onlineScenario) return
       if (rootShell.step === 0) {
         if (rootShell.appearance !== "" || Quickshell.env("PREVIEW_HC") === "1" || Quickshell.env("PREVIEW_LANG") !== "")
           app.saves.saveSettings(Object.assign({}, app.saves.settings, {
@@ -229,6 +313,19 @@ ShellRoot {
         rootShell.step = 1
         var sc = rootShell.scenario
         if (sc === "home") { view.screen = "home"; return }
+        if (sc === "online-invite") {
+          view.openOnline("invite")
+          app.online.invite({ mode: "online", gameLanguage: "fr", dictionary: "open-fr", timeMinutes: 20, validation: "immediate", challengePenalty: "none" })
+          return
+        }
+        if (sc === "online-join") { view.openOnline("join"); return }
+        if (sc === "online-proposal") {
+          view.openOnline("join")
+          app.online.transport = "tcp"
+          app.online.handle({ ev: "proposal", from: "Ana", gameId: "0123456789abcdef",
+                              config: { mode: "online", gameLanguage: "fr", dictionary: "open-fr", timeMinutes: 20, validation: "immediate" } })
+          return
+        }
         if (sc === "setup") { view.screen = "setup"; return }
         var mode = sc === "practice" ? "practice" : sc === "hvh" ? "human_vs_human" : "human_vs_ai"
         c.newGame({ mode: mode, difficulty: "expert", timeMinutes: sc === "timeout" ? 0.02 : 20, dictionary: gameDict, validation: sc === "challenge" || sc === "challenge-ai" ? "challenge" : "immediate", firstPlayer: "human" })

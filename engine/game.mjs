@@ -33,7 +33,8 @@ export const MODE = Object.freeze({
   HUMAN_VS_AI: "human_vs_ai",
   HUMAN_VS_HUMAN: "human_vs_human",
   PRACTICE: "practice",
-  AI_VS_AI: "ai_vs_ai"          // demonstration / spectator: two AIs, nobody's stats
+  AI_VS_AI: "ai_vs_ai",         // demonstration / spectator: two AIs, nobody's stats
+  ONLINE: "online"              // two machines, two equal copies of the game (docs/ONLINE.md)
 })
 
 export const STATUS = Object.freeze({ ACTIVE: "active", ENDED: "ended" })
@@ -56,6 +57,10 @@ function newGameId(rngSeed, now) {
 // options: { mode, players: [{ name, kind: "human"|"ai", difficulty }],
 //            rules, seed, dictionary: { id, name, version, official },
 //            firstPlayer: index | "random", settings, now, gameId }
+//
+// Online games (options.online = { seat, peerName }) start with every tile
+// hidden: tile ids are the handles of the encrypted bag (net/deck.py) and a
+// letter is filled in by revealTiles() only when this player may know it.
 export function createGame(options) {
   const opts = options || {}
   const now = Number.isFinite(opts.now) ? opts.now : Date.now()
@@ -64,7 +69,12 @@ export function createGame(options) {
   const seed = opts.seed === undefined || opts.seed === null ? randomSeed() : opts.seed
   const rng = createRng(seed)
   const playerSpecs = Array.isArray(opts.players) && opts.players.length > 0 ? opts.players.slice(0, 4) : [{ name: "Joueur", kind: "human" }]
-  const tiles = createTiles(tileset).map(function(t) { return { id: t.id, letter: t.letter, points: t.points, isJoker: t.isJoker } })
+  const online = opts.online && typeof opts.online === "object"
+    ? { seat: opts.online.seat === 1 ? 1 : 0, peerName: typeof opts.online.peerName === "string" ? opts.online.peerName.slice(0, 40) : "" }
+    : null
+  const tiles = createTiles(tileset).map(function(t) {
+    return online ? hiddenTile(t.id) : { id: t.id, letter: t.letter, points: t.points, isJoker: t.isJoker }
+  })
   const state = {
     version: STATE_VERSION,
     gameId: typeof opts.gameId === "string" && opts.gameId ? opts.gameId : newGameId(rng.seed, now),
@@ -95,8 +105,10 @@ export function createGame(options) {
     pending: null,
     status: STATUS.ACTIVE,
     end: null,
-    settings: opts.settings && typeof opts.settings === "object" ? JSON.parse(JSON.stringify(opts.settings)) : {}
+    settings: opts.settings && typeof opts.settings === "object" ? JSON.parse(JSON.stringify(opts.settings)) : {},
+    online: online
   }
+  if (online) state.mode = MODE.ONLINE
   for (let p = 0; p < state.players.length; p++) drawTiles(state, p, rules.rackSize)
   if (opts.firstPlayer === "random") state.current = nextInt(state.rng, state.players.length)
   else if (Number.isInteger(opts.firstPlayer) && opts.firstPlayer >= 0 && opts.firstPlayer < state.players.length) state.current = opts.firstPlayer
@@ -199,17 +211,111 @@ export function previewMove(state, player, placements, dictionary, options) {
   })
 }
 
-// Tiles the given player cannot see: the bag plus every other rack. Bag order
-// is never exposed — this is what a fair AI is allowed to know.
+// Tiles the given player cannot see: the whole set minus the board and their
+// own rack (the bag plus every other rack). Bag order is never exposed — this
+// is what a fair AI is allowed to know. Works with hidden tiles too.
 export function unseenCounts(state, player) {
   const counts = {}
-  const add = function(id) {
-    const l = state.tiles[id].letter
-    counts[l] = (counts[l] || 0) + 1
+  for (const t of createTiles(getTileset(state.rules.tileset))) counts[t.letter] = (counts[t.letter] || 0) + 1
+  const seen = function(id) {
+    const t = state.tiles[id]
+    if (!t || t.hidden) return
+    counts[t.letter]--
   }
-  state.bag.forEach(add)
-  for (let p = 0; p < state.players.length; p++) if (p !== player) state.players[p].rack.forEach(add)
+  for (const id of state.board) if (id !== null && id !== undefined) seen(id)
+  state.players[player].rack.forEach(seen)
+  for (const l of Object.keys(counts)) if (counts[l] <= 0) delete counts[l]
   return counts
+}
+
+// ------------------------------------------------------------------ online
+
+function hiddenTile(id) {
+  return { id: id, letter: null, points: 0, isJoker: false, hidden: true }
+}
+
+// Fills in letters: `revealed` maps tile id → index in the tile set (the
+// identity the encrypted bag decrypts to). Returns a new state; the tile
+// array is shared between states, so it is copied, never changed in place.
+export function revealTiles(state, revealed) {
+  const set = createTiles(getTileset(state.rules.tileset))
+  let tiles = null
+  for (const key of Object.keys(revealed || {})) {
+    const id = Number(key)
+    const index = revealed[key]
+    const t = state.tiles[id]
+    const base = set[index]
+    if (!t || t.retired || !base) throw new Error("revealTiles: unknown tile " + key)
+    if (!t.hidden) {
+      if (t.index !== index) throw new Error("revealTiles: tile " + id + " is already a different tile")
+      continue
+    }
+    if (!tiles) tiles = state.tiles.slice()
+    tiles[id] = { id: id, letter: base.letter, points: base.points, isJoker: base.isJoker, index: index }
+  }
+  return tiles ? Object.assign({}, state, { tiles: tiles }) : state
+}
+
+// After the two machines reshuffled the bag (tiles someone had seen went back
+// into it), the bag's tiles are retired and replaced by fresh hidden handles,
+// numbered on from the current tile array, in the new bag order.
+export function replaceBag(state, handles) {
+  if (!Array.isArray(handles) || handles.length !== state.bag.length) throw new Error("replaceBag: wrong number of tiles")
+  const tiles = state.tiles.slice()
+  for (const id of state.bag) tiles[id] = Object.assign(hiddenTile(id), { retired: true })
+  handles.forEach(function(h, i) {
+    if (h !== tiles.length) throw new Error("replaceBag: handle " + h + " out of sequence")
+    tiles.push(hiddenTile(h))
+  })
+  const next = cloneState(state)
+  next.tiles = tiles
+  next.bag = handles.slice()
+  return next
+}
+
+// The tiles still in play: board, racks, bag (what the end-of-game audit
+// accounts for).
+export function tilesInPlay(state) {
+  const out = []
+  for (const id of state.board) if (id !== null && id !== undefined) out.push(id)
+  for (const p of state.players) for (const id of p.rack) out.push(id)
+  for (const id of state.bag) out.push(id)
+  return out
+}
+
+// Once every rack is revealed, the end-of-game adjustments can be computed.
+export function completeEnd(state) {
+  if (!state.end || !state.end.awaitingReveal || racksHidden(state)) return state
+  const next = cloneState(state)
+  next.end = computeEnd(next, state.end.reason, state.end.actor, state.end.endedAt)
+  return next
+}
+
+function racksHidden(state) {
+  return state.players.some(function(p) { return p.rack.some(function(id) { return state.tiles[id].hidden }) })
+}
+
+// A short digest of everything both machines must agree on after a move.
+// Timestamps and letters a player may not know are left out.
+export function fingerprint(state) {
+  const text = [
+    state.status, state.current, state.turn, state.scorelessTurns, state.moves.length,
+    state.board.map(function(id) { return id === null || id === undefined ? "" : id + (state.jokerLetters[id] || "") }).join(","),
+    state.bag.join(","),
+    state.players.map(function(p) { return [p.score, p.timeUsedMs, p.rack.join(".")].join(":") }).join("|"),
+    state.pending ? state.pending.moveIndex : "-",
+    state.end && state.end.finalScores ? state.end.finalScores.join(",") : "-"
+  ].join(";")
+  // cyrb53: 53-bit string hash, plenty to notice two copies drifting apart.
+  let h1 = 0xdeadbeef, h2 = 0x41c6ce57
+  for (let i = 0; i < text.length; i++) {
+    const c = text.charCodeAt(i)
+    h1 = Math.imul(h1 ^ c, 2654435761)
+    h2 = Math.imul(h2 ^ c, 1597334677)
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909)
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909)
+  return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(16)
 }
 
 export function timeRemainingMs(state, player) {
@@ -271,7 +377,8 @@ function cloneState(state) {
     pending: state.pending ? Object.assign({}, state.pending) : null,
     status: state.status,
     end: state.end,
-    settings: state.settings
+    settings: state.settings,
+    online: state.online || null
   }
 }
 
@@ -330,6 +437,26 @@ function settlePending(state, events, ctx) {
 }
 
 function finalize(state, reason, actor, events, ctx) {
+  const endedAt = new Date(nowOf(ctx)).toISOString()
+  state.status = STATUS.ENDED
+  state.pending = null
+  if (state.online) {
+    // Online: the other racks are still encrypted. The final adjustments
+    // wait for the end-of-game reveal (completeEnd) on both machines alike,
+    // whatever each copy happens to know already.
+    const n = state.players.length
+    state.end = {
+      reason: reason, actor: actor, awaitingReveal: true, remaining: null,
+      adjustments: new Array(n).fill(0), timePenalties: new Array(n).fill(0),
+      finalScores: state.players.map(function(p) { return p.score }), winner: null, endedAt: endedAt
+    }
+  } else {
+    state.end = computeEnd(state, reason, actor, endedAt)
+  }
+  events.push({ type: "game_over", reason: reason, winner: state.end.winner, finalScores: state.end.finalScores, awaitingReveal: !!state.end.awaitingReveal })
+}
+
+function computeEnd(state, reason, actor, endedAt) {
   const n = state.players.length
   const remaining = state.players.map(function(p) { return rackValue(p.rack.map(function(id) { return state.tiles[id] })) })
   const adjustments = new Array(n).fill(0)
@@ -372,9 +499,7 @@ function finalize(state, reason, actor, events, ctx) {
       if (count > 1) winner = null
     }
   }
-  state.status = STATUS.ENDED
-  state.pending = null
-  state.end = {
+  return {
     reason: reason,
     actor: actor,
     remaining: remaining,
@@ -382,9 +507,8 @@ function finalize(state, reason, actor, events, ctx) {
     timePenalties: timePenalties,
     finalScores: finalScores,
     winner: winner,
-    endedAt: new Date(nowOf(ctx)).toISOString()
+    endedAt: endedAt
   }
-  events.push({ type: "game_over", reason: reason, winner: winner, finalScores: finalScores })
 }
 
 function checkScoreless(state, events, ctx) {

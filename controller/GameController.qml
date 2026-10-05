@@ -1,4 +1,5 @@
 import QtQuick
+import Quickshell.Io
 import "../engine/game.mjs" as Engine
 import "../engine/board.mjs" as BoardModel
 import "../engine/notation.mjs" as Notation
@@ -21,6 +22,7 @@ QtObject {
   property var dictionary: null   // DictionaryService
   property var saves: null        // SaveManager
   property var worker: null       // WorkerScript hosting the AI
+  property var online: null       // OnlineService (two machines, docs/ONLINE.md)
   property var settings: saves ? saves.settings : ({})
   property bool windowActive: true
   // Translator for notices (the view sets it to theme.t).
@@ -61,6 +63,13 @@ QtObject {
   property var queuedAiAction: null
   property bool waitingForWorker: false
 
+  // Online games: work the two machines do together between moves, and
+  // anything that went wrong between them.
+  property string onlineWork: ""     // "", "shuffling", "checking"
+  property var onlineProblem: null   // { kind: "cheat" | "desync" | "error", message }
+  property var onlinePendingRebag: null
+  property var onlineQueue: []       // events from the other machine waiting for the dictionary
+
   // Derived.
   readonly property bool hasGame: game !== null
   // Language of the game in progress (tiles, dictionary, notation) — not
@@ -73,7 +82,10 @@ QtObject {
   readonly property bool isActive: game !== null && game.status === "active"
   readonly property int current: game ? game.current : 0
   readonly property int viewer: viewerIndex(game)
-  readonly property bool humanTurn: isActive && game.players[game.current].kind === "human" && game.current === viewer && !handoverPending
+  readonly property bool isOnline: game !== null && game.mode === "online"
+  readonly property bool rackRevealing: { revision; return isOnline && game.players[viewer].rack.some(function(id) { return game.tiles[id].hidden }) }
+  readonly property bool onlineBlocked: isOnline && (onlineWork !== "" || onlineProblem !== null || rackRevealing)
+  readonly property bool humanTurn: isActive && game.players[game.current].kind === "human" && game.current === viewer && !handoverPending && !onlineBlocked
   readonly property var provider: dictionary ? dictionary.provider : null
   readonly property bool dictionaryReady: provider !== null
   readonly property var legal: { revision; return game ? Engine.legalActions(game, viewer) : ({}) }
@@ -96,6 +108,7 @@ QtObject {
 
   function viewerIndex(g) {
     if (!g) return 0
+    if (g.mode === "online" && g.online) return g.online.seat
     if (g.mode === "human_vs_human") return g.current
     for (var i = 0; i < g.players.length; i++) if (g.players[i].kind === "human") return i
     return 0
@@ -280,7 +293,8 @@ QtObject {
   function remainingMs(player) {
     if (!clockEnabled) return 0
     var used = game.players[player].timeUsedMs
-    if (isActive && player === game.current && !(settings.gameplay && settings.gameplay.pauseClockWhenHidden && !windowActive && game.players[player].kind === "human"))
+    var paused = !isOnline && settings.gameplay && settings.gameplay.pauseClockWhenHidden && !windowActive && game.players[player].kind === "human"
+    if (isActive && player === game.current && !paused)
       used += Math.max(0, clockNow - turnStartedAt)
     return game.rules.time.totalMs - used
   }
@@ -480,15 +494,21 @@ QtObject {
 
   // ------------------------------------------------------------- actions
 
-  function applyGameAction(action) {
+  // `remote`: the move comes from the other machine of an online game and
+  // already carries its time.
+  function applyGameAction(action, remote) {
     if (!game) return { ok: false }
+    if (isOnline && !remote && (onlineWork !== "" || onlineProblem !== null)) {
+      say(tr(onlineProblem ? "online.stopped" : "online.wait"), "error")
+      return { ok: false, reason: "UNKNOWN_ACTION" }
+    }
     var a = Object.assign({}, action)
-    if (a.player === game.current) a.elapsedMs = Math.max(0, Date.now() - turnStartedAt)
+    if (!remote && a.player === game.current) a.elapsedMs = Math.max(0, Date.now() - turnStartedAt)
     var res = guard("action", function() {
       return Engine.applyAction(game, a, { dictionary: provider, now: Date.now() })
     }, { ok: false, reason: "UNKNOWN_ACTION" })
     if (!res.ok) {
-      moveRejected(reasonText(res.reason, res.result), res.result || null)
+      if (!remote) moveRejected(reasonText(res.reason, res.result), res.result || null)
       return res
     }
     var before = game
@@ -507,10 +527,169 @@ QtObject {
     revision++
     moveCommitted(res.events, res.result, a.player)
     persist()
-    if (game.status === "ended") onGameEnded()
+    if (isOnline) onlineAfter(before, a, remote)
+    if (game.status === "ended") { if (!(game.end && game.end.awaitingReveal)) onGameEnded() }
     else afterTurnChange(before)
     return res
   }
+
+  // ------------------------------------------------------------ online
+
+  // The move is applied here first (and saved), then sent; both machines
+  // then do what the move implies: deal drawn tiles, reshuffle the bag if
+  // tiles someone saw went back into it, audit the game at the end.
+  function onlineAfter(before, action, remote) {
+    if (!online) return
+    if (!remote) {
+      var reveal = action.type === "play" ? action.placements.map(function(p) { return p.tileId }) : []
+      online.send({ cmd: "move", action: action, reveal: reveal, fp: Engine.fingerprint(game), index: before.moves.length })
+    }
+    var move = game.moves.length > before.moves.length ? game.moves[game.moves.length - 1] : null
+    if (move && move.drawn && move.drawn.length) online.send({ cmd: move.player === viewer ? "open" : "give", handles: move.drawn })
+    if (move && (move.type === "exchange" || (move.type === "challenge" && move.success))) onlineRebag()
+    if (game.status === "ended" && game.end && game.end.awaitingReveal) onlineAudit()
+  }
+
+  function onlineRebag() {
+    onlineWork = "shuffling"
+    onlinePendingRebag = game.bag.slice()
+    persist()
+    online.send({ cmd: "reshuffle", handles: game.bag })
+  }
+
+  function onlineAudit() {
+    onlineWork = "checking"
+    online.send({ cmd: "audit", inPlay: Engine.tilesInPlay(game) })
+  }
+
+  // After a restart: ask again for what may not have happened (all of it is
+  // harmless to repeat) and let the helper replay the other side's moves.
+  function onlineResume() {
+    if (!online || !isOnline) return
+    online.resume(game.gameId, game.moves.length)
+    var other = 1 - viewer
+    var mine = game.players[viewer].rack.filter(function(id) { return game.tiles[id].hidden })
+    if (mine.length) online.send({ cmd: "open", handles: mine })
+    if (game.status === "active") online.send({ cmd: "give", handles: game.players[other].rack })
+    if (onlinePendingRebag && JSON.stringify(onlinePendingRebag) === JSON.stringify(game.bag)) {
+      onlineWork = "shuffling"
+      online.send({ cmd: "reshuffle", handles: game.bag })
+    }
+    if (game.status === "ended" && game.end && game.end.awaitingReveal) onlineAudit()
+  }
+
+  function startOnlineGame(ev) {
+    var c = ev.config || {}
+    // Wait for the game's word list (the online screen loads it).
+    if (!provider || (c.dictionary && provider.id() !== c.dictionary)) { onlineQueue = onlineQueue.concat([ev]); return }
+    stopAi()
+    var names = Array.isArray(ev.names) ? ev.names.map(function(n) { return String(n || "").slice(0, 40) }) : ["", ""]
+    var seat = ev.seat === 1 ? 1 : 0
+    var created = guard("online game", function() {
+      return Engine.createGame({
+        mode: "online",
+        players: [{ name: names[0], kind: "human" }, { name: names[1], kind: "human" }],
+        rules: rulesFor(c, "online"),
+        dictionary: provider.describe(),
+        seed: Number(ev.seed) >>> 0,
+        now: Number(ev.now) || Date.now(),
+        gameId: String(ev.gameId),
+        firstPlayer: ev.first === 1 ? 1 : 0,
+        online: { seat: seat, peerName: names[1 - seat] }
+      })
+    }, null)
+    if (!created) return
+    resetUiState()
+    onlineWork = ""
+    onlineProblem = null
+    onlinePendingRebag = null
+    game = created
+    syncRackOrder()
+    revision++
+    persist()
+    online.send({ cmd: "open", handles: game.players[seat].rack })
+    online.send({ cmd: "give", handles: game.players[1 - seat].rack })
+    gameStarted()
+  }
+
+  function onOnlineEvent(ev) {
+    if (ev.ev === "started") { if (!game || game.gameId !== ev.gameId) startOnlineGame(ev); return }
+    if (!isOnline) return
+    if (ev.gameId && ev.gameId !== game.gameId) return
+    if (!provider && (ev.ev === "action" || ev.ev === "audited")) { onlineQueue = onlineQueue.concat([ev]); return }
+    guard("online", function() {
+      switch (ev.ev) {
+      case "revealed":
+        game = Engine.revealTiles(game, ev.tiles || {})
+        syncRackOrder()
+        revision++
+        persist()
+        break
+      case "action":
+        onRemoteAction(ev)
+        break
+      case "rebag":
+        if (JSON.stringify(ev.from) !== JSON.stringify(game.bag)) break
+        game = Engine.replaceBag(game, ev.handles)
+        onlineWork = ""
+        onlinePendingRebag = null
+        revision++
+        persist()
+        break
+      case "audited":
+        game = Engine.completeEnd(Engine.revealTiles(game, ev.tiles || {}))
+        onlineWork = ""
+        revision++
+        persist()
+        if (game.status === "ended" && !game.end.awaitingReveal) onGameEnded()
+        break
+      case "cheat":
+        onlineProblem = { kind: "cheat", message: String(ev.message || "") }
+        onlineWork = ""
+        say(tr("online.cheat"), "error")
+        break
+      case "error":
+        if (ev.code === "protocol" || ev.code === "no-session") {
+          onlineProblem = { kind: "error", message: String(ev.message || "") }
+          say(tr("online.problem"), "error")
+        }
+        break
+      }
+    }, null)
+  }
+
+  function onRemoteAction(ev) {
+    var a = ev.action
+    if (!a || typeof a !== "object" || typeof a.type !== "string" || !Number.isInteger(a.player)) {
+      onlineProblem = { kind: "desync", message: "malformed move" }
+      return
+    }
+    if (ev.index < game.moves.length) return           // already applied (replayed after a restart)
+    if (ev.index > game.moves.length) { onlineProblem = { kind: "desync", message: "missing moves" }; return }
+    game = Engine.revealTiles(game, ev.tiles || {})
+    var res = applyGameAction(a, true)
+    if (!res.ok) { onlineProblem = { kind: "desync", message: String(res.reason) }; say(tr("online.desync"), "error"); return }
+    if (ev.fp && Engine.fingerprint(game) !== ev.fp) {
+      // Recompute what the sender fingerprinted: the state right after the move.
+      onlineProblem = { kind: "desync", message: "different game states" }
+      say(tr("online.desync"), "error")
+      return
+    }
+    if (!windowActive && isActive && game.current === viewer) {
+      notifier.command = ["notify-send", "-a", "Omascrabble", tr("online.notify.title"), tr("online.notify.yourTurn", { name: playerLabel(a.player) })]
+      notifier.running = true
+    }
+  }
+
+  function flushOnlineQueue() {
+    if (!provider || onlineQueue.length === 0) return
+    var queued = onlineQueue
+    onlineQueue = []
+    for (var i = 0; i < queued.length; i++) onOnlineEvent(queued[i])
+  }
+  onProviderChanged: flushOnlineQueue()
+
+  property Process notifier: Process {}
 
   function confirmMove() {
     if (!humanTurn || pending.length === 0) return false
@@ -615,13 +794,7 @@ QtObject {
     if (!provider) { say(tr("notice.dictionaryNotLoaded"), "error"); return false }
     var c = config || {}
     var mode = c.mode || "human_vs_ai"
-    var minutes = Number(c.timeMinutes) || 0
-    var rules = {
-      tileset: Tileset.tilesetForLanguage(provider.language()),
-      validation: mode === "practice" ? "immediate" : (c.validation || "immediate"),
-      challenge: { penalty: c.challengePenalty || "none", penaltyPoints: 10 },
-      time: { totalMs: minutes * 60000, onTimeout: "end_game" }
-    }
+    var rules = rulesFor(c, mode)
     var names = c.playerNames || ["", ""]
     var players
     var first = 0
@@ -661,14 +834,28 @@ QtObject {
     return true
   }
 
+  function rulesFor(c, mode) {
+    var minutes = Number(c.timeMinutes) || 0
+    return {
+      tileset: Tileset.tilesetForLanguage(provider.language()),
+      validation: mode === "practice" ? "immediate" : (c.validation || "immediate"),
+      challenge: { penalty: c.challengePenalty || "none", penaltyPoints: 10 },
+      time: { totalMs: minutes * 60000, onTimeout: "end_game" }
+    }
+  }
+
   function resume(state, extras) {
     stopAi()
     resetUiState()
     game = state
     rackOrder = extras && extras.rackOrder && typeof extras.rackOrder === "object" ? extras.rackOrder : ({})
+    onlineWork = ""
+    onlineProblem = null
+    onlinePendingRebag = extras && extras.online && Array.isArray(extras.online.rebag) ? extras.online.rebag : null
     syncRackOrder()
     revision++
     gameStarted()
+    if (game.mode === "online") onlineResume()
     if (game.status === "ended") { endSummary = null; return }
     afterTurnChange(null)
   }
@@ -711,12 +898,13 @@ QtObject {
   }
 
   function persist() {
-    if (saves && game) saves.saveGame(game, { rackOrder: rackOrder })
+    if (saves && game) saves.saveGame(game, { rackOrder: rackOrder, online: isOnline ? { rebag: onlinePendingRebag } : undefined })
   }
 
   // Folds the running turn time into the state (window hidden, shutdown).
   function flushClock() {
-    if (!isActive || !clockEnabled) return
+    // Online: time only ever enters the game through moves (both copies agree).
+    if (!isActive || !clockEnabled || isOnline) return
     var p = game.current
     if (game.players[p].kind !== "human") return
     var elapsed = Date.now() - turnStartedAt
@@ -727,7 +915,7 @@ QtObject {
   }
 
   onWindowActiveChanged: {
-    if (!settings.gameplay || !settings.gameplay.pauseClockWhenHidden) return
+    if (isOnline || !settings.gameplay || !settings.gameplay.pauseClockWhenHidden) return
     if (!windowActive) flushClock()
     else turnStartedAt = Date.now()
   }
@@ -873,6 +1061,13 @@ QtObject {
     onTriggered: {
       ctl.clockNow = Date.now()
       var p = ctl.game.current
+      if (ctl.isOnline) {
+        // My clock: flag myself. Theirs: claim it 15 s after it ran out.
+        if (ctl.onlineWork !== "" || ctl.onlineProblem || ctl.game.rules.time.onTimeout !== "end_game") return
+        if ((p === ctl.viewer && ctl.remainingMs(p) <= 0) || (p !== ctl.viewer && ctl.remainingMs(p) <= -15000))
+          ctl.applyGameAction({ type: "timeout", player: p })
+        return
+      }
       var paused = ctl.settings.gameplay && ctl.settings.gameplay.pauseClockWhenHidden && !ctl.windowActive && ctl.game.players[p].kind === "human"
       if (paused || ctl.handoverPending) return
       if (ctl.game.rules.time.onTimeout === "end_game" && ctl.remainingMs(p) <= 0) {

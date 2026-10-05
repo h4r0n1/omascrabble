@@ -167,6 +167,7 @@ Item {
           item.dictionary = app.dictionary
           item.sounds = app.sounds
           item.definitions = app.definitions
+          item.online = app.online
           item.systemPrefersDark = Qt.binding(function() { return app.preferences.prefersDark })
           item.systemReducedMotion = Qt.binding(function() { return app.preferences.reducedMotion })
           item.windowVisible = Qt.binding(function() { return root.opened })

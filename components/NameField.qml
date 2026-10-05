@@ -7,7 +7,10 @@ Rectangle {
 
   property var theme
   property alias text: input.text
+  property alias maximumLength: input.maximumLength
+  property string placeholder: ""
   signal edited(string text)
+  signal accepted()
 
   implicitHeight: theme.controlHeight
   radius: theme.radius
@@ -29,5 +32,15 @@ Rectangle {
     activeFocusOnTab: true
     clip: true
     onTextEdited: field.edited(text)
+    onAccepted: field.accepted()
+  }
+  Text {
+    visible: input.text === "" && !input.activeFocus
+    anchors.fill: input
+    verticalAlignment: Text.AlignVCenter
+    text: field.placeholder
+    color: field.theme.muted
+    font: input.font
+    elide: Text.ElideRight
   }
 }

@@ -268,6 +268,37 @@ class Deck:
             raise CheatDetected("the tiles in play are not one of each tile")
         return {h: result[h] for h in in_play}
 
+    # ------------------------------------------------------------ storage
+    def to_json(self):
+        """Everything needed to carry on after a restart. Contains secret
+        keys: store it readable by the user only."""
+        hx = lambda v: format(v, "x")
+        pair = lambda k: [hx(k[0]), hx(k[1])]
+        return {
+            "n": self.n, "seat": self.seat, "next": self.next_handle,
+            "cards": {str(h): hx(v) for h, v in self.cards.items()},
+            "keys": {str(h): pair(k) for h, k in self.keys.items()},
+            "retired": {str(h): hx(v) for h, v in self.retired.items()},
+            "retiredKeys": {str(h): pair(k) for h, k in self.retired_keys.items()},
+            "known": {str(h): i for h, i in self.known.items()},
+            "global": pair(self._global) if self._global else None,
+            "pending": self._pending,
+        }
+
+    @classmethod
+    def from_json(cls, doc):
+        num = lambda v: int(v, 16)
+        deck = cls(int(doc["n"]), int(doc["seat"]))
+        deck.next_handle = int(doc["next"])
+        deck.cards = {int(h): num(v) for h, v in doc["cards"].items()}
+        deck.keys = {int(h): (num(k[0]), num(k[1])) for h, k in doc["keys"].items()}
+        deck.retired = {int(h): num(v) for h, v in doc["retired"].items()}
+        deck.retired_keys = {int(h): (num(k[0]), num(k[1])) for h, k in doc["retiredKeys"].items()}
+        deck.known = {int(h): int(i) for h, i in doc["known"].items()}
+        deck._global = (num(doc["global"][0]), num(doc["global"][1])) if doc.get("global") else None
+        deck._pending = list(doc["pending"]) if doc.get("pending") is not None else None
+        return deck
+
     # ------------------------------------------------------------ internals
     def _require_seat(self, seat):
         if self.seat != seat:

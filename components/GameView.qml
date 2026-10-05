@@ -15,6 +15,7 @@ FocusScope {
   property var dictionary
   property var sounds: null
   property var definitions: null
+  property var online: null       // OnlineService
   property bool systemPrefersDark: true
   property bool systemReducedMotion: false
   property bool windowVisible: true
@@ -104,6 +105,30 @@ FocusScope {
     onNewGameRequested: view.screen = "setup"
     onStatsRequested: view.overlay = "stats"
     onSettingsRequested: view.overlay = "settings"
+    onJoinRequested: view.openOnline("join")
+  }
+
+  OnlineScreen {
+    id: onlineScreen
+    anchors.fill: parent
+    visible: view.screen === "online"
+    theme: appTheme
+    online: view.online
+    settings: view.settings
+    saves: view.saves
+    dictionary: view.dictionary
+    onClosed: view.screen = view.controller.isActive ? "game" : "home"
+    onAcceptRequested: function(config) {
+      // The game needs the same word list as the inviter's.
+      if (config && config.dictionary && view.dictionary.dictionaryId !== config.dictionary) view.dictionary.load(config.dictionary)
+      view.online.accept()
+    }
+  }
+
+  function openOnline(mode) {
+    onlineScreen.mode = mode
+    if (mode === "join" && online && online.stage !== "proposal" && online.stage !== "dealing") online.stage = ""
+    screen = "online"
   }
 
   SetupScreen {
@@ -115,6 +140,14 @@ FocusScope {
     dictionary: view.dictionary
     onCancelled: view.screen = view.controller.isActive ? "game" : "home"
     onStartRequested: function(config) {
+      if (config.mode === "online") {
+        view.saves.saveSettings(SettingsModel.normalizeSettings(Object.assign({}, view.settings, { newGame: config })))
+        if (view.dictionary.dictionaryId !== config.dictionary || view.dictionary.status !== "ready") view.dictionary.load(config.dictionary)
+        view.openOnline("invite")
+        view.online.invite({ mode: "online", gameLanguage: config.gameLanguage, dictionary: config.dictionary,
+                             timeMinutes: config.timeMinutes, validation: config.validation, challengePenalty: config.challengePenalty })
+        return
+      }
       view.saves.saveSettings(SettingsModel.normalizeSettings(Object.assign({}, view.settings, { newGame: config, ai: Object.assign({}, view.settings.ai, { difficulty: config.difficulty || view.settings.ai.difficulty }) })))
       if (view.dictionary.dictionaryId !== config.dictionary || view.dictionary.status !== "ready") {
         pendingConfig = config
@@ -501,6 +534,7 @@ FocusScope {
     var g = controller ? controller.game : null
     if (!g) return ""
     var parts = [g.mode === "human_vs_human" ? tr("mode.human_vs_human.short") : tr("mode." + g.mode)]
+    if (g.mode === "online" && g.online) parts.push(tr("online.against", { name: controller.playerLabel(1 - g.online.seat) }))
     if (g.rules.validation === "challenge") parts.push(tr("mode.withChallenge"))
     if (g.rules.time.totalMs > 0) parts.push(tr("common.minutes", { n: Math.round(g.rules.time.totalMs / 60000) }))
     parts.push(tr("dict." + (g.dictionary.id || "open-fr") + ".label"))
@@ -515,6 +549,8 @@ FocusScope {
       return w === null ? tr(c.game.players.length > 1 ? "status.draw" : "status.gameOver") : (w === index ? tr("status.victory") : "")
     }
     if (c.current !== index) return tr("status.tiles", { n: c.game.players[index].rack.length })
+    if (c.isOnline && index !== c.viewer)
+      return tr(view.online && !view.online.peerConnected ? "online.status.offline" : "online.status.theirTurn", { name: c.playerLabel(index) })
     if (c.game.players[index].kind === "ai") return tr(c.aiThinking ? "status.computerThinking" : "status.computerTurn")
     if (c.handoverPending) return tr("status.waiting")
     if (c.game.mode === "human_vs_human") return tr("status.yourTurnNamed", { name: c.playerLabel(index) })
@@ -524,6 +560,13 @@ FocusScope {
   function scoreSummary() {
     var c = controller
     if (!c || !c.game) return ""
+    if (c.isOnline) {
+      if (c.onlineWork === "shuffling") return tr("online.status.shuffling")
+      if (c.onlineWork === "checking") return tr("online.status.checking")
+      if (c.isActive && c.rackRevealing) return tr("online.status.revealing")
+      if (c.isActive && c.current !== c.viewer)
+        return tr(view.online && !view.online.peerConnected ? "online.status.offline" : "online.status.theirTurn", { name: c.playerLabel(c.current) })
+    }
     if (c.isOver) return tr("status.gameOver")
     if (!c.humanTurn) return c.aiThinking ? tr("status.computerThinking") : ""
     var p = c.preview
@@ -672,6 +715,7 @@ FocusScope {
     if (connectedController === controller || !controller) return
     controller.tr = function(key, args) { return appTheme.t(key, args) }
     controller.moveCommitted.connect(view.onMoveCommitted)
+    controller.gameStarted.connect(function() { if (view.screen === "online") view.showGame() })
     controller.moveRejected.connect(view.onMoveRejected)
     controller.gameEnded.connect(view.onGameEnded)
     connectedController = controller
@@ -1043,7 +1087,7 @@ FocusScope {
     z: 60
     theme: appTheme
     controller: view.controller
-    visible: view.screen === "game" && view.controller.isOver && !view.endDismissed && !view.replaying
+    visible: !(view.controller.game && view.controller.game.end && view.controller.game.end.awaitingReveal) && view.screen === "game" && view.controller.isOver && !view.endDismissed && !view.replaying
     onNewGameRequested: view.screen = "setup"
     onReplayRequested: view.replaying = true
     onRematchRequested: view.startNewGame(view.settings.newGame ? Object.assign({}, view.settings.newGame, { difficulty: view.settings.ai.difficulty }) : {})
@@ -1107,6 +1151,33 @@ FocusScope {
 
   // Shown when the plugin on disk is newer than the code running in the
   // shell: keep-loaded panels only pick up new code on a shell restart.
+  // An online game that stopped (a false tile, the copies disagree).
+  Rectangle {
+    z: 97
+    visible: view.screen === "game" && !!view.controller && view.controller.isOnline && view.controller.onlineProblem !== null
+    anchors.top: parent.top
+    anchors.horizontalCenter: parent.horizontalCenter
+    anchors.topMargin: appTheme.spaceSmall
+    width: Math.min(parent.width - 2 * appTheme.padding, problemText.implicitWidth + 2 * appTheme.padding)
+    height: problemText.implicitHeight + appTheme.padding
+    radius: appTheme.radius
+    color: appTheme.mix(appTheme.background, appTheme.urgent, 0.18)
+    border.width: appTheme.borderWidth
+    border.color: appTheme.alpha(appTheme.urgent, 0.7)
+    Text {
+      id: problemText
+      anchors.centerIn: parent
+      width: Math.min(implicitWidth, view.width - 4 * appTheme.padding)
+      wrapMode: Text.WordWrap
+      horizontalAlignment: Text.AlignHCenter
+      readonly property var p: view.controller ? view.controller.onlineProblem : null
+      text: !p ? "" : p.kind === "cheat" ? tr("online.banner.cheat") : p.kind === "desync" ? tr("online.banner.desync") : tr("online.banner.error", { message: p.message })
+      color: appTheme.foreground
+      font.family: appTheme.fontFamily
+      font.pixelSize: appTheme.fontSmall
+    }
+  }
+
   property string runningVersion: ""
   property string installedVersion: ""
   Rectangle {
