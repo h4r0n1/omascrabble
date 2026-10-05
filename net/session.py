@@ -58,9 +58,12 @@ class Session:
         self.s["deck1"] = _hex(self.deck.setup_lock())
         self._save()
 
-    def new_join(self, name, tiles):
+    def new_join(self, name, tiles, auto_accept=False):
+        """`auto_accept`: the player already accepted (a friend's call), so
+        the proposal is accepted as soon as it arrives."""
         self.s = self._blank("joiner", 1, name, tiles)
         self.s["stage"] = "joining"
+        self.s["autoAccept"] = bool(auto_accept)
         self._save()
 
     def _emit(self, event):
@@ -178,7 +181,10 @@ class Session:
         self.s["tiles"] = tiles
         self.s["now"] = int(msg["now"])
         self.s["stage"] = "proposed"
-        self._emit({"ev": "proposal", "config": msg["config"], "from": self.s.get("peerName", ""), "gameId": self.s["id"]})
+        self._emit({"ev": "proposal", "config": msg["config"], "from": self.s.get("peerName", ""), "gameId": self.s["id"],
+                    "autoAccept": bool(self.s.get("autoAccept"))})
+        if self.s.get("autoAccept"):
+            self._cmd_accept({})
 
     def _cmd_accept(self, cmd):
         if self.s["role"] != "joiner" or self.s["stage"] != "proposed":

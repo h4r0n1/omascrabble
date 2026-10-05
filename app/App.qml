@@ -60,6 +60,17 @@ Item {
       return u ? u.charAt(0).toUpperCase() + u.slice(1) : ""
     }
     onEvent: function(ev) { gameController.onOnlineEvent(ev) }
+    onFriendsKnown: if (!saveManager.settings.online.knownFriends)
+      saveManager.saveSettings(Object.assign({}, saveManager.settings, { online: Object.assign({}, saveManager.settings.online, { knownFriends: true }) }))
+  }
+
+  // With friends and invitations on, be reachable while the game is loaded.
+  Connections {
+    target: saveManager
+    function onReadyChanged() {
+      var o = saveManager.settings.online
+      if (saveManager.ready && o.listen && o.knownFriends) onlineService.hello()
+    }
   }
 
   // An online game carries on in the background: reconnect as soon as the

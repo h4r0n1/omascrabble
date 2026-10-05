@@ -66,5 +66,42 @@ class ToxTest(unittest.TestCase):
         self.assertEqual(act2["fp"], "fp2")
 
 
+    def test_friends_call_each_other_without_a_link(self):
+        a, b = self.procs
+        a.send({"cmd": "hello", "name": "Ana"})
+        b.send({"cmd": "hello", "name": "Ben"})
+        wait_for(self.procs, 0, "ready")
+        # First game: by link. Both become friends.
+        a.send({"cmd": "invite", "config": {"gameLanguage": "fr", "dictionary": "open-fr"}})
+        link = wait_for(self.procs, 0, "invite")["link"]
+        b.send({"cmd": "join", "link": link})
+        wait_for(self.procs, 1, "proposal", timeout=180)
+        b.send({"cmd": "accept"})
+        wait_for(self.procs, 0, "started", timeout=180)
+        wait_for(self.procs, 1, "started", timeout=180)
+        friends_a = [e for e in a.events if e.get("ev") == "friends" and e["list"]][-1]["list"]
+        friends_b = [e for e in b.events if e.get("ev") == "friends" and e["list"]][-1]["list"]
+        self.assertEqual(friends_a[0]["name"], "Ben")
+        self.assertEqual(friends_b[0]["name"], "Ana")
+        ben = friends_a[0]["id"]
+        # Second game: Ana calls Ben, no link.
+        mark_a, mark_b = len(a.events), len(b.events)
+        a.send({"cmd": "call", "friend": ben, "config": {"gameLanguage": "en", "dictionary": "open-en"}})
+        call = wait_for(self.procs, 1, "call", timeout=120, after=mark_b)
+        self.assertEqual(call["name"], "Ana")
+        self.assertEqual(call["config"]["gameLanguage"], "en")
+        b.send({"cmd": "answer", "friend": call["friend"], "accept": True})
+        s2a = wait_for(self.procs, 0, "started", timeout=180, after=mark_a)
+        s2b = wait_for(self.procs, 1, "started", timeout=180, after=mark_b)
+        self.assertEqual(s2a["gameId"], s2b["gameId"])
+        self.assertEqual(s2b["config"]["gameLanguage"], "en")
+        # Third: Ben declines.
+        mark_a, mark_b = len(a.events), len(b.events)
+        a.send({"cmd": "call", "friend": ben, "config": {"gameLanguage": "fr"}})
+        call = wait_for(self.procs, 1, "call", timeout=120, after=mark_b)
+        b.send({"cmd": "answer", "friend": call["friend"], "accept": False})
+        wait_for(self.procs, 0, "declined", timeout=120, after=mark_a)
+
+
 if __name__ == "__main__":
     unittest.main()

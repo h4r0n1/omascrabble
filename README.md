@@ -211,9 +211,18 @@ Play with a friend on another Omarchy machine. **New game → Online → Invite*
 gives you a one-time link (`omascrabble://tox/…`); send it any way you like.
 Your friend opens **Home → Join a game**, pastes it and accepts your
 invitation; the two machines shuffle the bag together and the game starts on
-both. Later games with the same friend reconnect by themselves; a game
-carries on after a restart or a dropped connection, and a notification tells
-you when it's your turn while the window is closed.
+both. A game carries on after a restart or a dropped connection, and a
+notification tells you when it's your turn while the window is closed.
+
+**Friends.** After a first game, you are saved as friends on both machines.
+Next time, **New game → Online** lists them with an online dot and a
+**Play** button: your settings go straight to their game, which shows the
+invitation (and a desktop notification); if they're offline, it goes out as
+soon as their game connects. Only people you once played with through a real
+link can invite you this way, and you always choose whether to accept.
+*Settings → Online* holds your name, the switch to receive invitations (while
+it's on and you have friends, the game stays connected to the Tox network
+while it's loaded) and the friends list, with *Remove*.
 
 **Install once** (the rest of the game doesn't need it):
 

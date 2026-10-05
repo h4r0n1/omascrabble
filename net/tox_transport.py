@@ -37,6 +37,8 @@ MORE, LAST = 160, 161
 SAVEDATA_TYPE_TOX_SAVE = 1
 CONNECTION_NONE = 0
 MAX_MESSAGE = 4 * 1024 * 1024
+# Messages between friends outside any game (see net/online.py).
+LOBBY = ("call", "call-decline", "call-cancel")
 
 _lib = None
 
@@ -75,6 +77,7 @@ def _load():
         "tox_friend_by_public_key": (ctypes.c_uint32, [c_tox, u8p, err]),
         "tox_friend_get_public_key": (ctypes.c_bool, [c_tox, ctypes.c_uint32, u8p, err]),
         "tox_friend_get_connection_status": (ctypes.c_int, [c_tox, ctypes.c_uint32, err]),
+        "tox_friend_delete": (ctypes.c_bool, [c_tox, ctypes.c_uint32, err]),
         "tox_friend_send_lossless_packet": (ctypes.c_bool, [c_tox, ctypes.c_uint32, u8p, ctypes.c_size_t, err]),
         "tox_callback_friend_request": (None, [c_tox, ctypes.c_void_p]),
         "tox_callback_friend_connection_status": (None, [c_tox, ctypes.c_void_p]),
@@ -113,6 +116,10 @@ class ToxNode:
         self.save_path = save_path
         self.peers = {}             # public key hex -> ToxPeer
         self.invites = {}           # secret -> ToxPeer waiting for its friend
+        self.on_lobby = None        # (public key, message) for calls between friends
+        self.on_presence = None     # (public key, online) when a friend comes or goes
+        self._queues = {}           # friend number -> packets waiting to go out
+        self._buffers = {}          # friend number -> partial incoming message
         self._nodes = None
         self._bootstrapped = 0
         opt_err = ctypes.c_int(0)
@@ -147,7 +154,6 @@ class ToxNode:
         self.lib.tox_callback_friend_connection_status(self.tox, ctypes.cast(self._cbs[1], ctypes.c_void_p))
         self.lib.tox_callback_friend_lossless_packet(self.tox, ctypes.cast(self._cbs[2], ctypes.c_void_p))
         self.save()
-        self._unbound = {}          # friend number -> partial message (friends not tied to a game yet)
         # Bootstrap from the saved node list at once; refresh it meanwhile.
         try:
             with open(self._cache_path(), encoding="utf-8") as f:
@@ -235,8 +241,8 @@ class ToxNode:
         if self._nodes is not None and (not self._bootstrapped or (not self.online() and time.time() - self._bootstrapped > 20)):
             self._bootstrap()
         self.lib.tox_iterate(self.tox, None)
-        for peer in list(self.peers.values()):
-            peer.flush()
+        for friend in list(self._queues):
+            self._flush(friend)
 
     def close(self):
         if self.tox:
@@ -289,47 +295,98 @@ class ToxNode:
 
     def _on_connection(self, tox, friend, status, user):
         key = self.public_key_of(friend)
+        up = status != CONNECTION_NONE
+        if not up:
+            self._queues.pop(friend, None)
+            self._buffers.pop(friend, None)
         peer = self.peers.get(key)
         if peer is not None:
-            peer.connection_changed(status != CONNECTION_NONE)
+            peer.connection_changed(up)
+        if self.on_presence is not None:
+            self.on_presence(key, up)
 
+    # ------------------------------------------------------------ messages
+    # Every friend's packets are reassembled here, then routed: "auth"
+    # (proof of an invitation) binds a waiting game, lobby messages (calls
+    # between friends) go to the helper, anything else to the game bound to
+    # that friend.
     def _on_packet(self, tox, friend, data, length, user):
-        key = self.public_key_of(friend)
-        peer = self.peers.get(key)
         if length <= 0:
             return
-        if peer is not None:
-            peer.packet(bytes(data[:length]))
-            return
-        # A friend from an earlier game, not tied to any game yet: the only
-        # thing it may send is the secret of one of our open invitations.
         packet = bytes(data[:length])
         if packet[0] not in (MORE, LAST):
             return
-        buf = self._unbound.get(friend, b"") + packet[1:]
-        if len(buf) > 4096:
-            self._unbound.pop(friend, None)
+        buf = self._buffers.get(friend, b"") + packet[1:]
+        if len(buf) > MAX_MESSAGE:
+            self._buffers.pop(friend, None)
             return
         if packet[0] == MORE:
-            self._unbound[friend] = buf
+            self._buffers[friend] = buf
             return
-        self._unbound.pop(friend, None)
+        self._buffers.pop(friend, None)
         try:
             msg = json.loads(buf)
         except ValueError:
             return
-        if not isinstance(msg, dict) or msg.get("t") != "auth":
+        if not isinstance(msg, dict):
             return
-        secret = str(msg.get("secret", ""))
-        for s, p in list(self.invites.items()):
-            if secrets.compare_digest(s, secret):
-                del self.invites[s]
-                p.bind(key)
-                return
+        key = self.public_key_of(friend)
+        kind = msg.get("t")
+        if kind == "auth":
+            if key in self.peers:
+                return  # already playing with this friend: a reconnection
+            secret = str(msg.get("secret", ""))
+            for s, p in list(self.invites.items()):
+                if secrets.compare_digest(s, secret):
+                    del self.invites[s]
+                    p.bind(key)
+                    return
+            return
+        if kind in LOBBY:
+            if self.on_lobby is not None:
+                self.on_lobby(key, msg)
+            return
+        peer = self.peers.get(key)
+        if peer is not None:
+            peer.on_message(msg)
+
+    def send(self, friend, msg):
+        """Queue a message for a friend; sent in packets as room allows."""
+        data = json.dumps(msg, separators=(",", ":")).encode()
+        chunks = [data[i:i + CHUNK] for i in range(0, len(data), CHUNK)] or [b""]
+        queue = self._queues.setdefault(friend, [])
+        for i, chunk in enumerate(chunks):
+            queue.append(bytes([LAST if i == len(chunks) - 1 else MORE]) + chunk)
+        self._flush(friend)
+
+    def _flush(self, friend):
+        queue = self._queues.get(friend)
+        while queue:
+            packet = queue[0]
+            if not self.lib.tox_friend_send_lossless_packet(self.tox, friend, _buf(packet), len(packet), None):
+                return  # toxcore's queue is full: retry on the next iteration
+            queue.pop(0)
+
+    def friend_online(self, public_key_hex):
+        n = self.friend_number(public_key_hex)
+        return n is not None and self.lib.tox_friend_get_connection_status(self.tox, n, None) != CONNECTION_NONE
+
+    def send_to(self, public_key_hex, msg):
+        n = self.friend_number(public_key_hex)
+        if n is None or not self.friend_online(public_key_hex):
+            return False
+        self.send(n, msg)
+        return True
+
+    def forget(self, public_key_hex):
+        n = self.friend_number(public_key_hex)
+        if n is not None:
+            self.lib.tox_friend_delete(self.tox, n, None)
+            self.save()
 
 
 class ToxPeer:
-    """The other player of one session, seen through the ToxNode."""
+    """The other player of one game, seen through the ToxNode."""
 
     kind = "tox"
 
@@ -340,8 +397,6 @@ class ToxPeer:
         self.on_message = on_message
         self.on_disconnected = on_disconnected
         self.connected = False
-        self.incoming = b""
-        self.queue = []             # packets waiting for room in toxcore's queue
         self.friend = None
 
     def start(self):
@@ -358,10 +413,8 @@ class ToxPeer:
         self.link["peer"] = public_key_hex
         self.node.peers[public_key_hex] = self
         self.friend = self.node.friend_number(public_key_hex)
-        if self.friend is not None:
-            status = self.node.lib.tox_friend_get_connection_status(self.node.tox, self.friend, None)
-            if status != CONNECTION_NONE and not self.connected:
-                self.connection_changed(True)
+        if self.friend is not None and self.node.friend_online(public_key_hex) and not self.connected:
+            self.connection_changed(True)
 
     def address(self):
         return "omascrabble://tox/%s/%s" % (self.node.address(), self.link["secret"])
@@ -369,58 +422,27 @@ class ToxPeer:
     def connection_changed(self, up):
         if up and not self.connected:
             self.connected = True
-            self.incoming = b""
+            if self.friend is None:
+                self.friend = self.node.friend_number(self.link["peer"])
             if self.link["role"] == "joiner":
-                # Already friends from an earlier game means no friend
-                # request: prove the invitation in-band, before anything else.
+                # Friends from an earlier game send no friend request: prove
+                # the invitation in-band, before anything else.
                 self.send({"t": "auth", "secret": self.link["secret"]})
             self.on_connected()
         elif not up and self.connected:
             self.connected = False
-            self.queue = []
             self.on_disconnected()
-
-    def packet(self, data):
-        marker, body = data[0], data[1:]
-        if marker not in (MORE, LAST):
-            return
-        self.incoming += body
-        if len(self.incoming) > MAX_MESSAGE:
-            self.incoming = b""
-            return
-        if marker == LAST:
-            text, self.incoming = self.incoming, b""
-            try:
-                msg = json.loads(text)
-            except ValueError:
-                return
-            if isinstance(msg, dict) and msg.get("t") == "auth":
-                return  # handled by the node
-            self.on_message(msg)
 
     def send(self, msg):
         if not self.connected or self.friend is None:
             return  # the session resends from its log after reconnecting
-        data = json.dumps(msg, separators=(",", ":")).encode()
-        chunks = [data[i:i + CHUNK] for i in range(0, len(data), CHUNK)] or [b""]
-        for i, chunk in enumerate(chunks):
-            marker = LAST if i == len(chunks) - 1 else MORE
-            self.queue.append(bytes([marker]) + chunk)
-        self.flush()
-
-    def flush(self):
-        while self.queue and self.connected and self.friend is not None:
-            packet = self.queue[0]
-            ok = self.node.lib.tox_friend_send_lossless_packet(self.node.tox, self.friend, _buf(packet), len(packet), None)
-            if not ok:
-                return  # toxcore's send queue is full: retry on the next iteration
-            self.queue.pop(0)
+        self.node.send(self.friend, msg)
 
     def tick(self, now):
         pass
 
     def close(self):
         self.node.invites.pop(self.link.get("secret"), None)
-        if self.link.get("peer"):
+        if self.link.get("peer") and self.node.peers.get(self.link["peer"]) is self:
             self.node.peers.pop(self.link["peer"], None)
         self.connected = False

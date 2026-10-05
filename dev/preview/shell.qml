@@ -319,6 +319,25 @@ ShellRoot {
           return
         }
         if (sc === "online-join") { view.openOnline("join"); return }
+        var fakeFriends = [{ id: "A".repeat(64), name: "Sultan", online: true, last: 2 }, { id: "B".repeat(64), name: "Awa", online: false, last: 1 }]
+        if (sc === "online-friends") {
+          view.openOnline("invite")
+          app.online.invite({ mode: "online", gameLanguage: "fr", dictionary: "open-fr", timeMinutes: 20, validation: "immediate" })
+          Qt.callLater(function() { app.online.handle({ ev: "friends", list: fakeFriends }) })
+          return
+        }
+        if (sc === "online-calling") {
+          view.openOnline("invite")
+          app.online.handle({ ev: "friends", list: fakeFriends })
+          app.online.stage = "calling"
+          app.online.calling = { friend: "B".repeat(64), online: false }
+          return
+        }
+        if (sc === "online-settings") {
+          view.openSettings("online")
+          Qt.callLater(function() { app.online.handle({ ev: "friends", list: fakeFriends }) })
+          return
+        }
         if (sc === "online-proposal") {
           view.openOnline("join")
           app.online.transport = "tcp"
@@ -348,6 +367,8 @@ ShellRoot {
         }
         if (sc === "end") { if (c.isActive) c.resign() }
         if (sc === "joker") c.jokerRequest = { tileId: 0, row: 0, col: 0 }
+        if (sc === "online-call") app.online.handle({ ev: "call", friend: "A".repeat(64), name: "Sultan",
+                                                      config: { gameLanguage: "en", dictionary: "open-en", timeMinutes: 25, validation: "challenge" } })
         if (sc === "exchange") view.openExchange()
         if (sc === "practice") c.requestHint()
         if (sc === "words" || sc === "words-missing") view.openWords(["SIEGE", "CHAISE", "MOT"], "Vous  ·  H8  ·  24 pts")
@@ -360,6 +381,10 @@ ShellRoot {
         return
       }
       rootShell.step++
+      // The real helper answers with its own (empty) friends list; show the
+      // fake one again once it has.
+      if (rootShell.step === 25 && ["online-friends", "online-calling", "online-settings"].indexOf(rootShell.scenario) !== -1)
+        app.online.handle({ ev: "friends", list: [{ id: "A".repeat(64), name: "Sultan", online: true, last: 2 }, { id: "B".repeat(64), name: "Awa", online: false, last: 1 }] })
       if (rootShell.scenario === "timeout" && rootShell.step === 30) console.log("TIMEOUT " + app.controller.statusJson())
       if (rootShell.step === (rootShell.scenario === "timeout" ? 30 : Number(Quickshell.env("PREVIEW_STEPS")) || 14)) {
         console.log("DEFS packs " + JSON.stringify(app.definitions.packs))

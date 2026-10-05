@@ -125,6 +125,35 @@ FocusScope {
     }
   }
 
+  // A friend's invitation, wherever the player is.
+  ConfirmDialog {
+    id: callDialog
+    theme: appTheme
+    readonly property var call: view.online ? view.online.incomingCall : null
+    readonly property bool missing: !!call && !!view.dictionary && view.dictionary.installed[call.config.dictionary || "open-fr"] !== true
+    readonly property bool replaces: !!view.controller && view.controller.isActive
+    open: !!call
+    title: call ? tr("online.proposal", { name: call.name }) : ""
+    message: !call ? "" : onlineScreen.configSummary(call.config)
+      + (missing ? "\n\n" + tr("online.error.dictionary", { name: tr("dict." + (call.config.dictionary || "open-fr") + ".label") }) : "")
+      + (!missing && replaces ? "\n\n" + tr("online.call.replaces") : "")
+    confirmText: tr(missing ? "online.decline" : "online.accept")
+    cancelText: tr("online.decline")
+    destructive: replaces && !missing
+    onConfirmed: {
+      var c = call
+      if (!c) return
+      if (missing) { view.online.answer(false); return }
+      if (view.controller.isActive) view.controller.resign()
+      var dict = c.config.dictionary || "open-fr"
+      if (view.dictionary.dictionaryId !== dict || view.dictionary.status !== "ready") view.dictionary.load(dict)
+      view.online.answer(true)
+      view.openOnline("join")
+    }
+    onCancelled: view.online.answer(false)
+    onCallChanged: if (call && view.controller && !view.controller.windowActive) view.controller.notify(tr("online.notify.title"), tr("online.call.notify", { name: call.name }))
+  }
+
   function openOnline(mode) {
     onlineScreen.mode = mode
     if (mode === "join" && online && online.stage !== "proposal" && online.stage !== "dealing") online.stage = ""
@@ -143,6 +172,8 @@ FocusScope {
       if (config.mode === "online") {
         view.saves.saveSettings(SettingsModel.normalizeSettings(Object.assign({}, view.settings, { newGame: config })))
         if (view.dictionary.dictionaryId !== config.dictionary || view.dictionary.status !== "ready") view.dictionary.load(config.dictionary)
+        onlineScreen.gameConfig = { mode: "online", gameLanguage: config.gameLanguage, dictionary: config.dictionary,
+                                    timeMinutes: config.timeMinutes, validation: config.validation, challengePenalty: config.challengePenalty }
         view.openOnline("invite")
         view.online.invite({ mode: "online", gameLanguage: config.gameLanguage, dictionary: config.dictionary,
                              timeMinutes: config.timeMinutes, validation: config.validation, challengePenalty: config.challengePenalty })
@@ -1133,6 +1164,7 @@ FocusScope {
     saves: view.saves
     dictionary: view.dictionary
     definitions: view.definitions
+    online: view.online
     onClosed: { view.overlay = ""; keys.forceActiveFocus() }
   }
 

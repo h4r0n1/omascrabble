@@ -15,6 +15,7 @@ FocusScope {
   property var saves
   property var dictionary
   property var definitions: null
+  property var online: null              // OnlineService
   property string section: ""            // asked for by the caller ("about"…)
   property string current: "gameplay"    // page on show; kept between visits
   property string rebinding: ""          // shortcut being captured
@@ -30,6 +31,7 @@ FocusScope {
     { id: "accessibility", icon: "eye" },
     { id: "shortcuts", icon: "keyboard" },
     { id: "definitions", icon: "book" },
+    { id: "online", icon: "people" },
     { id: "about", icon: "info" }
   ]
   readonly property bool narrow: width < 760
@@ -43,6 +45,7 @@ FocusScope {
   }
   function show(id) {
     rebinding = ""
+    if (id === "online" && online) online.hello()   // fetch the friends list
     if (current !== id) fadeIn.restart()
     current = id
     flick.contentY = 0
@@ -514,6 +517,119 @@ FocusScope {
                 allowRemove: true
                 topPadding: 6
                 bottomPadding: 6
+              }
+            }
+          }
+        }
+
+        // ------------------------------------------------------- En ligne
+        Column {
+          visible: page.current === "online"
+          width: parent.width
+          spacing: page.theme.spaceLarge
+          property string removing: ""
+          Timer { id: removeTimeout; interval: 4000; onTriggered: parent.removing = "" }
+
+          Column {
+            width: parent.width
+            spacing: 6
+            Text {
+              text: page.tr("online.name")
+              color: page.theme.muted
+              font.family: page.theme.fontFamily
+              font.pixelSize: page.theme.fontSmall
+              font.weight: Font.DemiBold
+            }
+            NameField {
+              width: Math.min(320, parent.width)
+              theme: page.theme
+              text: page.s.online.name || (page.online ? page.online.playerName : "")
+              onEdited: function(t) { page.set("online.name", t.trim().slice(0, 24)) }
+            }
+            Text {
+              text: page.tr("online.name.detail")
+              color: page.theme.muted
+              font.family: page.theme.fontFamily
+              font.pixelSize: page.theme.fontCaption
+            }
+          }
+
+          SettingsCard {
+            width: parent.width
+            theme: page.theme
+            ToggleRow {
+              width: parent.width
+              theme: page.theme
+              label: page.tr("settings.online.listen")
+              detail: page.tr("settings.online.listen.detail")
+              checked: page.s.online.listen
+              onToggled: function(v) {
+                page.set("online.listen", v)
+                if (!page.online) return
+                if (v) page.online.hello()
+                else page.online.stop()
+              }
+            }
+          }
+
+          SettingsCard {
+            id: friendsCard
+            width: parent.width
+            theme: page.theme
+            title: page.tr("online.friends")
+            readonly property string removing: parent.removing
+            Text {
+              visible: !page.online || page.online.friends.length === 0
+              x: 10
+              width: parent.width - 20
+              topPadding: 8
+              bottomPadding: 8
+              wrapMode: Text.WordWrap
+              text: page.online && page.online.checked && !page.online.available ? page.tr("settings.online.unavailable") : page.tr("settings.online.friends.empty")
+              color: page.theme.muted
+              font.family: page.theme.fontFamily
+              font.pixelSize: page.theme.fontSmall
+            }
+            Repeater {
+              model: page.online ? page.online.friends : []
+              Item {
+                required property var modelData
+                required property int index
+                width: parent.width
+                height: page.theme.controlHeight + 8
+                Rectangle { visible: index > 0; width: parent.width - 12; x: 6; height: 1; color: page.theme.line }
+                Rectangle {
+                  id: fdot
+                  x: 10
+                  anchors.verticalCenter: parent.verticalCenter
+                  width: 8; height: 8; radius: 4
+                  color: modelData.online ? page.theme.accent : page.theme.alpha(page.theme.foreground, 0.25)
+                }
+                Column {
+                  anchors.left: fdot.right
+                  anchors.leftMargin: 10
+                  anchors.verticalCenter: parent.verticalCenter
+                  Text { text: modelData.name || "?"; color: page.theme.foreground; font.family: page.theme.fontFamily; font.pixelSize: page.theme.fontBody }
+                  Text {
+                    text: page.tr(modelData.online ? "online.friend.online" : "online.friend.offline")
+                    color: page.theme.muted; font.family: page.theme.fontFamily; font.pixelSize: page.theme.fontCaption
+                  }
+                }
+                GameButton {
+                  anchors.right: parent.right
+                  anchors.rightMargin: 4
+                  anchors.verticalCenter: parent.verticalCenter
+                  theme: page.theme
+                  readonly property bool confirming: friendsCard.removing === modelData.id
+                  variant: confirming ? "primary" : "ghost"
+                  danger: confirming
+                  text: page.tr(confirming ? "settings.online.removeConfirm" : "settings.online.remove")
+                  onClicked: {
+                    if (!confirming) { friendsCard.parent.removing = modelData.id; removeTimeout.restart(); return }
+                    friendsCard.parent.removing = ""
+                    page.online.forget(modelData.id)
+                  }
+                }
               }
             }
           }

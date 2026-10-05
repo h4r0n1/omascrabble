@@ -61,7 +61,9 @@ export const DEFAULT_SETTINGS = Object.freeze({
   }),
   shortcuts: DEFAULT_SHORTCUTS,
   online: Object.freeze({
-    name: ""                  // shown to the other player; "" = the system user name
+    name: "",                 // shown to the other player; "" = the system user name
+    listen: true,             // friends may invite me while the game is loaded
+    knownFriends: false       // set once a friend exists: go online at startup to hear their calls
   })
 })
 
@@ -150,7 +152,9 @@ export function normalizeSettings(input) {
     },
     shortcuts: shortcuts,
     online: {
-      name: typeof obj(src.online).name === "string" ? obj(src.online).name.trim().slice(0, 24) : ""
+      name: typeof obj(src.online).name === "string" ? obj(src.online).name.trim().slice(0, 24) : "",
+      listen: bool(obj(src.online).listen, d.online.listen),
+      knownFriends: bool(obj(src.online).knownFriends, d.online.knownFriends)
     }
   }
 }

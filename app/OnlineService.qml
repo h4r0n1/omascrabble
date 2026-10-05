@@ -29,6 +29,12 @@ Item {
   property bool peerConnected: false
   property var lastError: null       // { code, message }
 
+  // Friends: people played with over Tox, who can be invited without a link.
+  property var friends: []           // [{ id, name, online, last }]
+  property var calling: null         // { friend, online } while our call waits
+  property var incomingCall: null    // { friend, name, config } from a friend
+  signal friendsKnown()
+
   signal event(var ev)
 
   property var queue: []
@@ -40,6 +46,15 @@ Item {
   function send(cmd) {
     if (helper.running && helper.ready) helper.write(JSON.stringify(cmd) + "\n")
     else { queue = queue.concat([cmd]); start() }
+  }
+
+  // Leave the network (invitations off), unless a game or an invitation is
+  // under way.
+  function stop() {
+    if (helper.running && (stage === "" || stage === "playing" || stage === "declined" || stage === "failed")) {
+      helper.write(JSON.stringify({ cmd: "quit" }) + "\n")
+      transport = ""
+    }
   }
 
   function hello() {
@@ -68,9 +83,31 @@ Item {
     send({ cmd: "join", link: String(text).trim(), tiles: tiles })
   }
 
+  function call(friendId, config) {
+    lastError = null; link = ""; proposal = null; peerConnected = false
+    stage = "calling"
+    calling = { friend: friendId, online: false }
+    hello()
+    send({ cmd: "call", friend: friendId, config: config })
+  }
+
+  function answer(accept) {
+    var c = incomingCall
+    incomingCall = null
+    if (!c) return
+    if (accept) { stage = "dealing"; proposal = null }
+    send({ cmd: "answer", friend: c.friend, accept: !!accept })
+  }
+
+  function forget(friendId) { send({ cmd: "forget", friend: friendId }) }
+  function friendName(id) {
+    for (var i = 0; i < friends.length; i++) if (friends[i].id === id) return friends[i].name
+    return ""
+  }
+
   function accept() { stage = "dealing"; send({ cmd: "accept" }) }
   function decline() { stage = ""; send({ cmd: "decline" }) }
-  function cancel() { stage = ""; link = ""; proposal = null; send({ cmd: "cancel" }) }
+  function cancel() { stage = ""; link = ""; proposal = null; calling = null; send({ cmd: "cancel" }) }
 
   function resume(gameId, moves) {
     hello()
@@ -93,6 +130,8 @@ Item {
       if (stage === "inviting") stage = "dealing"
       break
     case "proposal":
+      // A friend's call already accepted: the proposal is accepted for us.
+      if (ev.autoAccept) { stage = "dealing"; break }
       proposal = { config: ev.config || {}, from: String(ev.from || "").slice(0, 40), gameId: String(ev.gameId || "") }
       stage = "proposal"
       break
@@ -101,9 +140,26 @@ Item {
       break
     case "declined":
       stage = "declined"
+      calling = null
+      break
+    case "friends":
+      friends = Array.isArray(ev.list) ? ev.list.filter(function(f) { return f && typeof f.id === "string" }).map(function(f) {
+        return { id: f.id, name: String(f.name || "").slice(0, 40), online: !!f.online, last: Number(f.last) || 0 }
+      }) : []
+      if (friends.length > 0) friendsKnown()
+      break
+    case "calling":
+      calling = { friend: String(ev.friend || ""), online: !!ev.online }
+      break
+    case "call":
+      incomingCall = { friend: String(ev.friend || ""), name: String(ev.name || "").slice(0, 40), config: ev.config || {} }
+      break
+    case "call-cancelled":
+      if (incomingCall && incomingCall.friend === ev.friend) incomingCall = null
       break
     case "started":
       stage = "playing"
+      calling = null
       break
     case "link":
       peerConnected = ev.state === "connected"

@@ -676,9 +676,13 @@ QtObject {
       return
     }
     if (!windowActive && isActive && game.current === viewer) {
-      notifier.command = ["notify-send", "-a", "Omascrabble", tr("online.notify.title"), tr("online.notify.yourTurn", { name: playerLabel(a.player) })]
-      notifier.running = true
+      notify(tr("online.notify.title"), tr("online.notify.yourTurn", { name: playerLabel(a.player) }))
     }
+  }
+
+  function notify(title, body) {
+    notifier.command = ["notify-send", "-a", "Omascrabble", String(title), String(body)]
+    notifier.running = true
   }
 
   function flushOnlineQueue() {

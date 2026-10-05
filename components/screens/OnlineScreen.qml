@@ -14,6 +14,7 @@ FocusScope {
   property var saves
   property var dictionary
   property string mode: "invite"   // invite | join
+  property var gameConfig: null    // invite: the settings chosen in New game
 
   signal closed()
   signal acceptRequested(var config)
@@ -42,7 +43,7 @@ FocusScope {
   function saveName(text) {
     if (!saves) return
     var next = JSON.parse(JSON.stringify(settings))
-    next.online = { name: text.trim().slice(0, 24) }
+    next.online = Object.assign({}, settings.online, { name: text.trim().slice(0, 24) })
     saves.saveSettings(next)
   }
 
@@ -174,12 +175,89 @@ FocusScope {
           }
         }
 
-        // ---------------------------------------------------- invite
+        // ---------------------------------------------------- friends
         SettingsCard {
-          visible: page.mode === "invite"
+          visible: page.mode === "invite" && !!page.online && page.online.friends.length > 0 && page.online.stage !== "calling" && page.online.stage !== "dealing"
           width: parent.width
           theme: page.theme
-          title: page.tr("online.link")
+          title: page.tr("online.friends")
+          Repeater {
+            model: page.online ? page.online.friends : []
+            Item {
+              required property var modelData
+              required property int index
+              width: parent.width
+              height: page.theme.controlHeight + 8
+              Rectangle {
+                visible: index > 0
+                width: parent.width - 12
+                x: 6
+                height: 1
+                color: page.theme.line
+              }
+              Rectangle {
+                id: dot
+                x: 10
+                anchors.verticalCenter: parent.verticalCenter
+                width: 8; height: 8; radius: 4
+                color: modelData.online ? page.theme.accent : page.theme.alpha(page.theme.foreground, 0.25)
+              }
+              Column {
+                anchors.left: dot.right
+                anchors.leftMargin: 10
+                anchors.verticalCenter: parent.verticalCenter
+                Text {
+                  text: modelData.name || "?"
+                  color: page.theme.foreground
+                  font.family: page.theme.fontFamily
+                  font.pixelSize: page.theme.fontBody
+                }
+                Text {
+                  text: page.tr(modelData.online ? "online.friend.online" : "online.friend.offline")
+                  color: page.theme.muted
+                  font.family: page.theme.fontFamily
+                  font.pixelSize: page.theme.fontCaption
+                }
+              }
+              GameButton {
+                anchors.right: parent.right
+                anchors.rightMargin: 4
+                anchors.verticalCenter: parent.verticalCenter
+                theme: page.theme
+                variant: modelData.online ? "primary" : "secondary"
+                icon: "play"
+                text: page.tr("online.play")
+                onClicked: page.online.call(modelData.id, page.gameConfig || {})
+              }
+            }
+          }
+        }
+
+        // A call to a friend waiting for their answer.
+        SettingsCard {
+          visible: page.mode === "invite" && !!page.online && page.online.stage === "calling"
+          width: parent.width
+          theme: page.theme
+          Text {
+            x: 10
+            width: parent.width - 20
+            topPadding: 10
+            bottomPadding: 10
+            wrapMode: Text.WordWrap
+            readonly property var c: page.online ? page.online.calling : null
+            text: !c ? "" : page.tr(c.online ? "online.calling.sent" : "online.calling.offline", { name: page.online.friendName(c.friend) })
+            color: page.theme.foreground
+            font.family: page.theme.fontFamily
+            font.pixelSize: page.theme.fontBody
+          }
+        }
+
+        // ---------------------------------------------------- invite
+        SettingsCard {
+          visible: page.mode === "invite" && !!page.online && page.online.stage !== "calling"
+          width: parent.width
+          theme: page.theme
+          title: page.tr(page.online && page.online.friends.length > 0 ? "online.link.new" : "online.link")
           Column {
             x: 10
             width: parent.width - 20
@@ -315,7 +393,8 @@ FocusScope {
           wrapMode: Text.WordWrap
           readonly property string stage: page.online ? page.online.stage : ""
           visible: text !== ""
-          text: stage === "inviting" ? page.tr("online.waiting")
+          text: stage === "calling" ? ""
+            : stage === "inviting" ? page.tr("online.waiting")
             : stage === "joining" ? page.tr("online.connecting")
             : stage === "dealing" ? (page.online.peerName ? page.tr("online.joined", { name: page.online.peerName }) + "  " : "") + page.tr("online.dealing")
             : stage === "declined" ? page.tr("online.declined")
