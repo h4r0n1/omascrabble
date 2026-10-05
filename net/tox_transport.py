@@ -147,7 +147,17 @@ class ToxNode:
         self.lib.tox_callback_friend_connection_status(self.tox, ctypes.cast(self._cbs[1], ctypes.c_void_p))
         self.lib.tox_callback_friend_lossless_packet(self.tox, ctypes.cast(self._cbs[2], ctypes.c_void_p))
         self.save()
+        self._unbound = {}          # friend number -> partial message (friends not tied to a game yet)
+        # Bootstrap from the saved node list at once; refresh it meanwhile.
+        try:
+            with open(self._cache_path(), encoding="utf-8") as f:
+                self._nodes = json.load(f)
+        except (OSError, ValueError):
+            self._nodes = None
         threading.Thread(target=self._fetch_nodes, daemon=True).start()
+
+    def _cache_path(self):
+        return os.path.join(os.path.dirname(self.save_path), "nodes.json")
 
     # identity
     def address(self):
@@ -168,7 +178,7 @@ class ToxNode:
 
     # network
     def _fetch_nodes(self):
-        cache = os.path.join(os.path.dirname(self.save_path), "nodes.json")
+        cache = self._cache_path()
         nodes = None
         try:
             with urllib.request.urlopen(NODES_URL, timeout=15) as r:
@@ -177,12 +187,13 @@ class ToxNode:
             with open(cache, "w", encoding="utf-8") as f:
                 json.dump(nodes, f)
         except (OSError, ValueError):
-            try:
-                with open(cache, encoding="utf-8") as f:
-                    nodes = json.load(f)
-            except (OSError, ValueError):
-                nodes = []
+            if self._nodes is not None:
+                return  # keep the cached list
+            nodes = []
+        fresh = self._nodes is None
         self._nodes = nodes
+        if fresh:
+            self._bootstrapped = 0
 
     def _bootstrap(self):
         nodes = list(self._nodes or [])
@@ -285,8 +296,36 @@ class ToxNode:
     def _on_packet(self, tox, friend, data, length, user):
         key = self.public_key_of(friend)
         peer = self.peers.get(key)
-        if peer is not None and length > 0:
+        if length <= 0:
+            return
+        if peer is not None:
             peer.packet(bytes(data[:length]))
+            return
+        # A friend from an earlier game, not tied to any game yet: the only
+        # thing it may send is the secret of one of our open invitations.
+        packet = bytes(data[:length])
+        if packet[0] not in (MORE, LAST):
+            return
+        buf = self._unbound.get(friend, b"") + packet[1:]
+        if len(buf) > 4096:
+            self._unbound.pop(friend, None)
+            return
+        if packet[0] == MORE:
+            self._unbound[friend] = buf
+            return
+        self._unbound.pop(friend, None)
+        try:
+            msg = json.loads(buf)
+        except ValueError:
+            return
+        if not isinstance(msg, dict) or msg.get("t") != "auth":
+            return
+        secret = str(msg.get("secret", ""))
+        for s, p in list(self.invites.items()):
+            if secrets.compare_digest(s, secret):
+                del self.invites[s]
+                p.bind(key)
+                return
 
 
 class ToxPeer:
@@ -331,6 +370,10 @@ class ToxPeer:
         if up and not self.connected:
             self.connected = True
             self.incoming = b""
+            if self.link["role"] == "joiner":
+                # Already friends from an earlier game means no friend
+                # request: prove the invitation in-band, before anything else.
+                self.send({"t": "auth", "secret": self.link["secret"]})
             self.on_connected()
         elif not up and self.connected:
             self.connected = False
@@ -351,6 +394,8 @@ class ToxPeer:
                 msg = json.loads(text)
             except ValueError:
                 return
+            if isinstance(msg, dict) and msg.get("t") == "auth":
+                return  # handled by the node
             self.on_message(msg)
 
     def send(self, msg):

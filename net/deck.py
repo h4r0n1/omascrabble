@@ -51,6 +51,22 @@ P = int(
 Q = (P - 1) // 2
 
 
+# Batch exponentiation hook: the helper installs a pool-backed version so a
+# setup or reshuffle uses every core. Takes [(base, exponent)], returns
+# [base^exponent mod p] in order.
+POWMAP = None
+
+
+def pow_mod(base, exponent):
+    return pow(base, exponent, P)
+
+
+def pow_all(pairs):
+    if POWMAP is not None and len(pairs) > 8:
+        return POWMAP(pairs)
+    return [pow(b, e, P) for b, e in pairs]
+
+
 class CheatDetected(Exception):
     """The other side sent something an honest player could not have sent."""
 
@@ -143,7 +159,7 @@ class Deck:
         self._require_seat(0)
         self._global = new_key()
         e = self._global[0]
-        return shuffled([pow(encode(i), e, P) for i in range(self.n)])
+        return shuffled(pow_all([(encode(i), e) for i in range(self.n)]))
 
     def setup_relock(self, values):
         """B, step 2: lock again with B's global key, shuffle."""
@@ -151,7 +167,7 @@ class Deck:
         check_elements(values, self.n, "setup")
         self._global = new_key()
         e = self._global[0]
-        return shuffled([pow(x, e, P) for x in values])
+        return shuffled(pow_all([(x, e) for x in values]))
 
     def setup_personalise(self, values):
         """Step 3 (A) then 4 (B): swap my global lock for one key per
@@ -203,14 +219,14 @@ class Deck:
         self._require_seat(0)
         self._begin_reshuffle(handles)
         e = self._global[0]
-        return [pow(self.cards[h], (self.keys[h][1] * e) % Q, P) for h in handles]
+        return pow_all([(self.cards[h], (self.keys[h][1] * e) % Q) for h in handles])
 
     def reshuffle_strip_shuffle(self, handles, values):
         self._require_seat(1)
         self._begin_reshuffle(handles)
         check_elements(values, len(handles), "reshuffle")
         e = self._global[0]
-        return shuffled([pow(x, (self.keys[h][1] * e) % Q, P) for h, x in zip(handles, values)])
+        return shuffled(pow_all([(x, (self.keys[h][1] * e) % Q) for h, x in zip(handles, values)]))
 
     def reshuffle_shuffle_personalise(self, values):
         self._require_seat(0)
@@ -306,11 +322,12 @@ class Deck:
 
     def _personalise(self, values, handles):
         d = self._global[1]
-        out = []
+        pairs = []
         for h, x in zip(handles, values):
             key = new_key()
             self.keys[h] = key
-            out.append(pow(x, (d * key[0]) % Q, P))
+            pairs.append((x, (d * key[0]) % Q))
+        out = pow_all(pairs)
         self._global = None
         if self.seat == 1:
             self._adopt(out, handles)

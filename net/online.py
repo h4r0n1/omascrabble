@@ -285,7 +285,14 @@ class Helper:
         try:
             if name == "hello":
                 self.name = str(cmd.get("name", ""))[:40]
-                emit({"ev": "ready", "transport": self._transport_kind(), "tox": self._tox_available()})
+                kind = self._transport_kind()
+                emit({"ev": "ready", "transport": kind, "tox": self._tox_available()})
+                # Join the Tox network now, while the player is still on the
+                # online screen: by the time they invite or paste a link, the
+                # node is already reachable.
+                if kind == "tox" and self.tox is None:
+                    import tox_transport
+                    self.tox = tox_transport.ToxNode(os.path.join(self.dir, "tox.save"), self.name)
             elif name == "invite":
                 self._invite(cmd)
             elif name == "join":
@@ -323,6 +330,7 @@ class Helper:
         self._open_transport(link)
         self._remember_link()
         emit({"ev": "invite", "link": self.transport.address(), "gameId": game_id})
+        self.session.precompute()
 
     def _join(self, cmd):
         link = parse_link(cmd.get("link", ""))
@@ -409,7 +417,25 @@ def main():
     data = os.environ.get("XDG_STATE_HOME") or os.path.expanduser("~/.local/state")
     parser.add_argument("--state-dir", default=data)
     args = parser.parse_args()
+    start_pool()
     Helper(args.state_dir).run()
+
+
+def start_pool():
+    """Worker processes for the bag's big-number maths, forked now — before
+    any thread or network handle exists — so they share nothing but the
+    already-imported code (and write nothing anywhere)."""
+    import multiprocessing
+    import deck
+    workers = min(6, os.cpu_count() or 1)
+    if workers < 2:
+        return
+    try:
+        pool = multiprocessing.get_context("fork").Pool(workers)
+    except (OSError, ValueError):
+        return
+    chunk = lambda n: max(1, n // (workers * 2))
+    deck.POWMAP = lambda pairs: pool.starmap(deck.pow_mod, pairs, chunksize=chunk(len(pairs)))
 
 
 if __name__ == "__main__":

@@ -49,6 +49,15 @@ class Session:
         self._save()
         return self.s["id"]
 
+    def precompute(self):
+        """Inviter: lock and shuffle the bag now, while waiting for the
+        friend, so dealing starts at once when they accept."""
+        if self.s["seat"] != 0 or self.s.get("deck1") or self.deck is not None:
+            return
+        self.deck = Deck(self.s["tiles"], 0)
+        self.s["deck1"] = _hex(self.deck.setup_lock())
+        self._save()
+
     def new_join(self, name, tiles):
         self.s = self._blank("joiner", 1, name, tiles)
         self.s["stage"] = "joining"
@@ -230,9 +239,13 @@ class Session:
         self.s["seed"] = int.from_bytes(digest[:4], "big")
         self.s["first"] = digest[4] & 1
         self.s["stage"] = "dealing"
-        self.deck = Deck(self.s["tiles"], self.s["seat"])
         if self.s["seat"] == 0:
-            self._send({"t": "deck1", "values": _hex(self.deck.setup_lock())})
+            if self.deck is None or not self.s.get("deck1"):
+                self.deck = Deck(self.s["tiles"], 0)
+                self.s["deck1"] = _hex(self.deck.setup_lock())
+            self._send({"t": "deck1", "values": self.s["deck1"]})
+        else:
+            self.deck = Deck(self.s["tiles"], 1)
 
     # ------------------------------------------------------------ dealing
     def _on_deck1(self, msg):

@@ -728,8 +728,13 @@ FocusScope {
   property real dragX: 0
   property real dragY: 0
 
+  // Rearranging the rack is the player's own business: allowed whenever their
+  // rack is showing, even while the other player (or the computer) moves.
+  // Placing on the board waits for their turn (see endDrag).
   function beginDrag(tileId, source, sx, sy) {
-    if (!controller.humanTurn || tileId < 0) return
+    if (tileId < 0) return
+    var rackOnly = source === "rack" && controller.isActive && !controller.handoverPending
+    if (!controller.humanTurn && !rackOnly) return
     dragTileId = tileId
     dragSource = source
     controller.selectedTileId = tileId
@@ -759,7 +764,7 @@ FocusScope {
     board.dropCol = -1
     controller.setHover(-1, -1)
     var cell = board.cellAtScene(sx, sy)
-    if (cell && controller.cells[cell.row * 15 + cell.col].kind === "empty") {
+    if (cell && controller.humanTurn && controller.cells[cell.row * 15 + cell.col].kind === "empty") {
       if (controller.placeTile(id, cell.row, cell.col) && sounds) sounds.play("place")
       return
     }
