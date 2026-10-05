@@ -138,8 +138,15 @@ def read_lexicon(path):
     return words
 
 
+def clean_text(text):
+    """Definitions are shown as plain text; anything shaped like markup (an
+    HTML tag) is dropped here too, so a pack never carries any."""
+    text = re.sub(r"<[^<>]{0,300}>", "", str(text))
+    return re.sub(r"[\x00-\x1f\x7f\s]+", " ", text).strip()
+
+
 def clean_gloss(text):
-    text = re.sub(r"\s+", " ", str(text)).strip()
+    text = clean_text(text)
     if len(text) > MAX_GLOSS:
         text = text[:MAX_GLOSS - 1].rsplit(" ", 1)[0] + "…"
     return text
@@ -165,9 +172,9 @@ def entry_from(record):
     if lemma:
         senses = senses[:1]  # "plural of house" — the base word carries the meaning
     pos = record.get("pos_title") or POS_NAMES.get(record.get("pos"), record.get("pos")) or ""
-    entry = {"w": record["word"], "p": str(pos), "d": senses}
+    entry = {"w": clean_text(record["word"])[:40], "p": clean_text(pos)[:40], "d": senses}
     if lemma and lemma != record["word"]:
-        entry["of"] = lemma
+        entry["of"] = clean_text(lemma)[:40]
     return entry
 
 

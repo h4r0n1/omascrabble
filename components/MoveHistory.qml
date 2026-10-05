@@ -43,6 +43,7 @@ Item {
         color: modelData.player === 0 ? history.theme.accent : history.theme.muted
       }
       Text {
+        textFormat: Text.PlainText
         id: num
         anchors.left: dot.right
         anchors.leftMargin: 8
@@ -54,6 +55,7 @@ Item {
         font.pixelSize: history.theme.fontSmall
       }
       Text {
+        textFormat: Text.PlainText
         anchors.left: num.right
         anchors.right: pos.left
         anchors.rightMargin: 6
@@ -69,6 +71,7 @@ Item {
         font.letterSpacing: modelData.type === "play" ? 0.6 : 0
       }
       Text {
+        textFormat: Text.PlainText
         id: pos
         anchors.right: score.left
         anchors.rightMargin: 10
@@ -79,6 +82,7 @@ Item {
         font.pixelSize: history.theme.fontSmall
       }
       Text {
+        textFormat: Text.PlainText
         id: score
         anchors.right: parent.right
         anchors.rightMargin: 8
@@ -102,6 +106,7 @@ Item {
     }
 
     Text {
+      textFormat: Text.PlainText
       visible: list.count === 0
       anchors.centerIn: parent
       text: history.theme.t("history.empty")

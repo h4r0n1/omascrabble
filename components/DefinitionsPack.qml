@@ -37,6 +37,7 @@ Column {
     width: parent.width
     spacing: pack.theme.space
     Text {
+      textFormat: Text.PlainText
       width: parent.width - (removeButton.visible ? removeButton.width + parent.spacing : 0)
       anchors.verticalCenter: parent.verticalCenter
       wrapMode: Text.WordWrap
@@ -85,6 +86,7 @@ Column {
       width: parent.width
       spacing: pack.theme.space
       Text {
+        textFormat: Text.PlainText
         width: parent.width - cancelButton.width - parent.spacing
         anchors.verticalCenter: parent.verticalCenter
         wrapMode: Text.WordWrap
@@ -106,6 +108,7 @@ Column {
       }
     }
     Text {
+      textFormat: Text.PlainText
       width: parent.width
       wrapMode: Text.WordWrap
       color: pack.theme.muted
@@ -134,6 +137,7 @@ Column {
       }
     }
     Text {
+      textFormat: Text.PlainText
       visible: pack.otherBusy
       width: parent.width
       wrapMode: Text.WordWrap
@@ -143,6 +147,7 @@ Column {
       text: pack.tr("defs.busyOther")
     }
     Text {
+      textFormat: Text.PlainText
       visible: !!pack.job && (pack.job.stage === "error" || pack.job.stage === "cancelled")
       width: parent.width
       wrapMode: Text.WordWrap
@@ -153,6 +158,7 @@ Column {
         : pack.tr("defs.error." + (pack.job.error ? pack.job.error.code : "other"))
     }
     Text {
+      textFormat: Text.PlainText
       visible: !!pack.job && pack.job.stage === "error" && !!pack.job.error && pack.job.error.message !== ""
       width: parent.width
       wrapMode: Text.WrapAnywhere
@@ -166,12 +172,14 @@ Column {
       width: parent.width
       spacing: 4
       Text {
+        textFormat: Text.PlainText
         color: pack.theme.muted
         font.family: pack.theme.fontFamily
         font.pixelSize: pack.theme.fontCaption
         text: pack.tr("defs.terminal")
       }
       TextEdit {
+        textFormat: TextEdit.PlainText
         width: parent.width
         readOnly: true
         selectByMouse: true

@@ -97,15 +97,23 @@ Item {
 
   function prefixOf(folded) { return folded.slice(0, 2) }
 
+  // Pack contents are downloaded data: shown only as plain text (every Text
+  // in the game is PlainText), and anything shaped like markup is dropped
+  // here as well, so nothing in a definition can ever be interpreted or
+  // fetched.
+  function clean(s, max) {
+    return String(s).replace(/<[^<>]*>/g, "").replace(/[\u0000-\u001f\u007f\s]+/g, " ").trim().slice(0, max)
+  }
+
   function sanitizeEntries(list) {
     if (!Array.isArray(list)) return []
     var out = []
     for (var i = 0; i < list.length && i < 12; i++) {
       var e = list[i]
       if (!e || typeof e.w !== "string" || !Array.isArray(e.d)) continue
-      var defs = e.d.filter(function(d) { return typeof d === "string" }).slice(0, 4).map(function(d) { return d.slice(0, 400) })
+      var defs = e.d.filter(function(d) { return typeof d === "string" }).slice(0, 4).map(function(d) { return clean(d, 400) }).filter(function(d) { return d !== "" })
       if (!defs.length) continue
-      out.push({ w: e.w.slice(0, 40), p: typeof e.p === "string" ? e.p.slice(0, 40) : "", d: defs, of: typeof e.of === "string" ? e.of.slice(0, 40) : "" })
+      out.push({ w: clean(e.w, 40), p: typeof e.p === "string" ? clean(e.p, 40) : "", d: defs, of: typeof e.of === "string" ? clean(e.of, 40) : "" })
     }
     return out
   }

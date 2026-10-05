@@ -14,5 +14,6 @@ import * as stats from "./stats.test.mjs"
 import * as settings from "./settings.test.mjs"
 import * as i18n from "./i18n.test.mjs"
 import * as online from "./online.test.mjs"
+import * as plaintext from "./plaintext.test.mjs"
 
-export const SUITES = [board, scoring, bag, validation, endgame, serializer, dictionary, ai, aiplayer, stats, settings, i18n, online]
+export const SUITES = [board, scoring, bag, validation, endgame, serializer, dictionary, ai, aiplayer, stats, settings, i18n, online, plaintext]

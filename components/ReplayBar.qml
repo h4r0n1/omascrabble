@@ -43,6 +43,7 @@ Rectangle {
     GameButton { theme: bar.theme; icon: "first"; variant: "ghost"; focusable: false; onClicked: bar.index = 0 }
     GameButton { theme: bar.theme; icon: "prev"; variant: "ghost"; focusable: false; onClicked: bar.index = Math.max(0, bar.index - 1) }
     Text {
+      textFormat: Text.PlainText
       width: 220
       anchors.verticalCenter: parent.verticalCenter
       horizontalAlignment: Text.AlignHCenter

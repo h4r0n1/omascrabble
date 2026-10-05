@@ -70,6 +70,7 @@ Item {
           color: (mouse.containsMouse || menu.cursor === index) && available ? Style.hoverFillFor(menu.theme.foreground, menu.theme.accent) : "transparent"
           opacity: available ? 1 : 0.45
           Text {
+            textFormat: Text.PlainText
             x: Style.spacing.controlPaddingX
             anchors.verticalCenter: parent.verticalCenter
             text: modelData.text

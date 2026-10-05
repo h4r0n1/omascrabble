@@ -57,6 +57,7 @@ Item {
     }
 
     Text {
+      textFormat: Text.PlainText
       visible: cell.showLabels && !cell.occupied && cell.premium !== "NONE" && !cell.ghostVisible
       anchors.centerIn: parent
       text: cell.theme.premiumLabel(cell.premium)
@@ -68,6 +69,7 @@ Item {
     }
     // Without labels the star still marks the centre.
     Text {
+      textFormat: Text.PlainText
       visible: !cell.showLabels && cell.premium === "CENTER" && !cell.occupied
       anchors.centerIn: parent
       text: "★"

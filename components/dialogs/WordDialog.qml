@@ -59,6 +59,7 @@ Dialog {
         width: parent.width
         spacing: dlg.theme.space
         Text {
+          textFormat: Text.PlainText
           width: parent.width
           wrapMode: Text.WordWrap
           text: dlg.theme.t("words.notInstalled", {
@@ -89,6 +90,7 @@ Dialog {
           Row {
             spacing: 10
             Text {
+              textFormat: Text.PlainText
               text: modelData
               color: dlg.theme.foreground
               font.family: dlg.theme.fontFamily
@@ -97,6 +99,7 @@ Dialog {
               font.letterSpacing: 1
             }
             Text {
+              textFormat: Text.PlainText
               visible: spellings.length > 0
               text: spellings.join(", ")
               color: dlg.theme.muted
@@ -108,6 +111,7 @@ Dialog {
           }
 
           Text {
+            textFormat: Text.PlainText
             visible: !!dlg.definitions && dlg.definitions.installed && !!result && result.entries.length === 0
             width: parent.width
             wrapMode: Text.WordWrap
@@ -124,6 +128,7 @@ Dialog {
               width: body.width
               spacing: 3
               Text {
+                textFormat: Text.PlainText
                 text: modelData.p !== "" ? modelData.p.toUpperCase() + "  ·  " + modelData.w : modelData.w
                 color: dlg.theme.accent
                 font.family: dlg.theme.fontFamily
@@ -134,6 +139,7 @@ Dialog {
               Repeater {
                 model: modelData.d
                 Text {
+                  textFormat: Text.PlainText
                   required property var modelData
                   required property int index
                   width: body.width
@@ -154,6 +160,7 @@ Dialog {
                   spacing: 2
                   leftPadding: 14
                   Text {
+                    textFormat: Text.PlainText
                     text: modelData.w + (modelData.p !== "" ? "  ·  " + modelData.p.toLowerCase() : "")
                     color: dlg.theme.muted
                     font.family: dlg.theme.fontFamily
@@ -163,6 +170,7 @@ Dialog {
                   Repeater {
                     model: modelData.d
                     Text {
+                      textFormat: Text.PlainText
                       required property var modelData
                       required property int index
                       width: body.width - 14
@@ -186,6 +194,7 @@ Dialog {
     width: parent.width
     height: closeButton.height
     Text {
+      textFormat: Text.PlainText
       visible: !!dlg.definitions && dlg.definitions.installed
       anchors.left: parent.left
       anchors.verticalCenter: parent.verticalCenter

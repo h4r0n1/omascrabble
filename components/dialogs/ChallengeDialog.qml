@@ -39,6 +39,7 @@ Dialog {
 
 
   Text {
+    textFormat: Text.PlainText
     width: parent.width
     text: dlg.theme.t("challenge.checked", { dictionary: dlg.dictionaryName })
     color: dlg.theme.muted
@@ -73,6 +74,7 @@ Dialog {
             anchors.verticalCenter: parent.verticalCenter
           }
           Text {
+            textFormat: Text.PlainText
             text: modelData.word
             color: dlg.theme.foreground
             font.family: dlg.theme.fontFamily
@@ -82,6 +84,7 @@ Dialog {
             anchors.verticalCenter: parent.verticalCenter
           }
           Text {
+            textFormat: Text.PlainText
             readonly property var spellings: dlg.forms[modelData.word] || []
             text: modelData.valid ? (spellings.length ? spellings.join(", ") : "") : dlg.theme.t("challenge.notInDictionary")
             color: dlg.theme.muted

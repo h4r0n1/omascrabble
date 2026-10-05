@@ -87,6 +87,7 @@ FocusScope {
         spacing: setup.theme.space
         GameButton { theme: setup.theme; icon: "back"; variant: "ghost"; focusable: false; tooltip: setup.tr("common.back"); onClicked: setup.cancelled(); anchors.verticalCenter: parent.verticalCenter }
         Text {
+          textFormat: Text.PlainText
           text: setup.tr("setup.title")
           color: setup.theme.foreground
           font.family: setup.theme.fontFamily
@@ -203,6 +204,7 @@ FocusScope {
         width: parent.width
         spacing: setup.theme.space
         Text {
+          textFormat: Text.PlainText
           text: setup.tr("setup.players")
           color: setup.theme.muted
           font.family: setup.theme.fontFamily

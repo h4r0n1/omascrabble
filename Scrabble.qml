@@ -22,7 +22,7 @@ Item {
   readonly property string selfId: "omascrabble"
   // Must match manifest.json "version"; a mismatch means the files on disk
   // were updated while this (keep-loaded) code kept running.
-  readonly property string codeVersion: "0.2.0"
+  readonly property string codeVersion: "0.2.1"
   readonly property string pluginDir: {
     var url = Qt.resolvedUrl(".").toString()
     return decodeURIComponent(url.replace(/^file:\/\//, "")).replace(/\/$/, "")
@@ -188,6 +188,7 @@ Item {
           width: Math.min(560, parent.width - 48)
           spacing: 14
           Text {
+            textFormat: Text.PlainText
             width: parent.width
             wrapMode: Text.WordWrap
             text: I18n.t(I18n.resolveLanguage(appLoader.item ? appLoader.item.saves.settings.language : "en", Qt.locale().name), "boot.failed.title")
@@ -197,6 +198,7 @@ Item {
             font.bold: true
           }
           Text {
+            textFormat: Text.PlainText
             width: parent.width
             wrapMode: Text.WordWrap
             text: I18n.t(I18n.resolveLanguage(appLoader.item ? appLoader.item.saves.settings.language : "en", Qt.locale().name), "boot.failed.text")
@@ -205,6 +207,7 @@ Item {
             font.pixelSize: Style.font.body
           }
           Text {
+            textFormat: Text.PlainText
             width: parent.width
             wrapMode: Text.WrapAnywhere
             text: viewLoader.status === Loader.Error && viewLoader.sourceComponent ? viewLoader.sourceComponent.errorString() : ""
@@ -218,6 +221,7 @@ Item {
             radius: Style.cornerRadius
             color: Color.accent
             Text {
+              textFormat: Text.PlainText
               id: retryLabel
               anchors.centerIn: parent
               text: I18n.t(I18n.resolveLanguage(appLoader.item ? appLoader.item.saves.settings.language : "en", Qt.locale().name), "common.retry")

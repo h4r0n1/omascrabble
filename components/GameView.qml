@@ -327,6 +327,7 @@ FocusScope {
         anchors.right: parent.right
         height: visible ? previewText.implicitHeight + 4 : 0
         Text {
+          textFormat: Text.PlainText
           id: previewText
           anchors.horizontalCenter: parent.horizontalCenter
           width: parent.width
@@ -451,6 +452,7 @@ FocusScope {
           width: parent.width - 2 * appTheme.padding
           spacing: appTheme.space
           Text {
+            textFormat: Text.PlainText
             text: view.controller.pending.length > 0 ? tr("panel.yourMove") : view.lastMoveTitle()
             color: appTheme.muted
             font.family: appTheme.fontFamily
@@ -478,6 +480,7 @@ FocusScope {
             showValidity: false
           }
           Text {
+            textFormat: Text.PlainText
             visible: !!view.controller.bestMoveReveal
             width: parent.width
             wrapMode: Text.WordWrap
@@ -511,6 +514,7 @@ FocusScope {
         border.width: appTheme.borderWidth
         border.color: appTheme.line
         Text {
+          textFormat: Text.PlainText
           id: historyTitle
           x: appTheme.padding
           y: appTheme.padding * 0.8
@@ -559,6 +563,7 @@ FocusScope {
       border.width: appTheme.borderWidth
       border.color: appTheme.line
       Text {
+        textFormat: Text.PlainText
         id: drawerTitle
         x: appTheme.padding; y: appTheme.padding
         text: tr("panel.history", { bag: tr("common.tilesInBag", { n: view.controller.bagCount }) })
@@ -1257,6 +1262,7 @@ FocusScope {
     border.width: appTheme.borderWidth
     border.color: appTheme.alpha(appTheme.accent, 0.7)
     Text {
+      textFormat: Text.PlainText
       id: bannerText
       anchors.centerIn: parent
       width: Math.min(implicitWidth, view.width - 4 * appTheme.padding)
@@ -1286,6 +1292,7 @@ FocusScope {
     visible: opacity > 0.01
     Behavior on opacity { NumberAnimation { duration: appTheme.anim(160) } }
     Text {
+      textFormat: Text.PlainText
       id: toastText
       anchors.centerIn: parent
       width: Math.min(implicitWidth, view.width - 4 * appTheme.padding)

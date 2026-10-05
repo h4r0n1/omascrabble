@@ -86,6 +86,7 @@ Rectangle {
       anchors.verticalCenter: parent.verticalCenter
     }
     Text {
+      textFormat: Text.PlainText
       visible: button.text !== ""
       text: button.text
       color: button.ink
