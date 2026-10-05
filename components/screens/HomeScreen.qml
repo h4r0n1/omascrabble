@@ -176,7 +176,7 @@ FocusScope {
         Text {
           anchors.horizontalCenter: parent.horizontalCenter
           text: home.dictionary && home.dictionary.provider
-            ? home.tr("dict." + home.dictionary.provider.id() + ".label") + "  ·  " + home.tr("home.words", { n: Format.formatInt(home.dictionary.provider.graph().wordCount) })
+            ? home.tr("dict." + home.dictionary.provider.id() + ".label") + "  ·  " + home.tr("home.words", { n: Format.formatInt(home.dictionary.provider.graph().wordCount, home.theme.language) })
             : ""
           color: home.theme.muted
           font.family: home.theme.fontFamily

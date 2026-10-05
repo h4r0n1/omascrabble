@@ -12,6 +12,7 @@ FocusScope {
   property var theme
   property var saves
   property var dictionary
+  property var definitions: null
   property string section: ""
   property string rebinding: ""          // shortcut being captured
 
@@ -230,6 +231,43 @@ FocusScope {
         }
       }
 
+      SectionTitle { width: parent.width; theme: page.theme; text: page.tr("settings.definitions") }
+      Column {
+        width: parent.width
+        spacing: page.theme.spaceLarge
+        Text {
+          width: parent.width
+          wrapMode: Text.WordWrap
+          lineHeight: 1.2
+          color: page.theme.muted
+          font.family: page.theme.fontFamily
+          font.pixelSize: page.theme.fontSmall
+          text: page.tr("settings.definitions.note")
+        }
+        Repeater {
+          model: ["fr", "en"]
+          Column {
+            required property string modelData
+            width: parent.width
+            spacing: page.theme.space
+            Text {
+              color: page.theme.foreground
+              font.family: page.theme.fontFamily
+              font.pixelSize: page.theme.fontBody
+              font.weight: Font.DemiBold
+              text: page.tr("settings.definitions." + modelData)
+            }
+            DefinitionsPack {
+              width: parent.width
+              theme: page.theme
+              definitions: page.definitions
+              language: modelData
+              allowRemove: true
+            }
+          }
+        }
+      }
+
       SectionTitle { id: about; width: parent.width; theme: page.theme; text: page.tr("settings.about") }
       Column {
         width: parent.width
@@ -245,7 +283,7 @@ FocusScope {
           font.pixelSize: page.theme.fontBody
           text: parent.p
             ? page.tr("settings.about.loaded", { name: page.tr("dict." + parent.p.id() + ".label"), official: parent.p.isOfficial() ? page.tr("settings.about.official") : "",
-                                               n: Format.formatInt(parent.p.graph().wordCount), version: parent.p.version() })
+                                               n: Format.formatInt(parent.p.graph().wordCount, page.theme.language), version: parent.p.version() })
             : page.tr("settings.about.notLoaded")
         }
         Text {

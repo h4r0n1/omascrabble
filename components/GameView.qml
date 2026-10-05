@@ -645,6 +645,19 @@ FocusScope {
     view.endDismissed = false
     if (view.sounds) view.sounds.play(end.winner === 0 || end.winner === null ? "victory" : "valid")
   }
+  // A definitions download started here may end while another screen (or
+  // none) is showing: say how it went.
+  function onDefinitionsInstalled(language, ok) {
+    if (!controller || (definitions.job && definitions.job.stage === "cancelled")) return
+    controller.say(tr(ok ? "defs.done" : "defs.failed"), ok ? "info" : "error")
+  }
+  property var connectedDefinitions: null
+  onDefinitionsChanged: {
+    if (connectedDefinitions === definitions || !definitions) return
+    definitions.installFinished.connect(view.onDefinitionsInstalled)
+    connectedDefinitions = definitions
+  }
+
   property var connectedController: null
   onControllerChanged: {
     if (connectedController === controller || !controller) return
@@ -1053,6 +1066,7 @@ FocusScope {
     theme: appTheme
     saves: view.saves
     dictionary: view.dictionary
+    definitions: view.definitions
     onClosed: { view.overlay = ""; keys.forceActiveFocus() }
   }
 

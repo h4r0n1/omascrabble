@@ -201,20 +201,25 @@ selectable in *New game*. Nothing else changes.
 Click a word in the history, the last-move panel or the end-of-game lists to
 see its definitions. They come from **Wiktionary** (CC BY-SA 4.0, extracted by
 Kaikki.org) — the French Wiktionnaire for French games, the English Wiktionary
-for English games — as optional packs, one per game language, installed once:
+for English games — as optional packs, one per game language.
+
+Install them from the game: **Download** in the definitions dialog, or
+*Settings → Definitions*, which lists both packs with their state and a
+**Remove** button. The download shows its progress, can be cancelled, and
+carries on if you close the window. It needs `python3` (standard library
+only) and a network connection, once; French is about 740 MB, English about
+520 MB, streamed and filtered on the fly — only entries playable in that
+language's word list are kept (up to three short definitions each, with a
+link from an inflected form to its base word), written as small JSON shards
+to `~/.local/share/omascrabble/definitions/<lang>`. The game then reads them
+offline.
+
+The same thing from a terminal:
 
 ```bash
-python3 ~/.config/omarchy/plugins/omascrabble/tools/install-definitions.py            # French, ~740 MB
-python3 ~/.config/omarchy/plugins/omascrabble/tools/install-definitions.py --lang en  # English, ~520 MB
+python3 ~/.config/omarchy/plugins/omascrabble/tools/install-definitions.py            # French
+python3 ~/.config/omarchy/plugins/omascrabble/tools/install-definitions.py --lang en  # English
 ```
-
-Each streams its download, keeps only entries playable in that language's word
-list (with up to three short definitions each, and a link from an inflected
-form to its base word), and writes small JSON shards to
-`~/.local/share/omascrabble/definitions/<lang>`. Python 3 standard library
-only. The game reads the packs offline and never downloads anything itself;
-without the pack for the current game's language, the dialog shows the
-install command. Remove them with `rm -rf ~/.local/share/omascrabble/definitions`.
 
 ## 9. Configuration
 

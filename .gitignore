@@ -3,3 +3,4 @@ node_modules/
 *.qmlc
 *.jsc
 .DS_Store
+__pycache__/

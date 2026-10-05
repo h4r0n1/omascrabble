@@ -61,4 +61,11 @@ export function register(t) {
     t.equal(formatInt(-1234567), "−1 234 567")
     t.equal(formatDecimal(43.25, 1), "43,3")
   })
+
+  t.test("English number formatting", function() {
+    t.equal(formatInt(407142, "en"), "407,142")
+    t.equal(formatInt(-1234567, "en"), "−1,234,567")
+    t.equal(formatInt(999, "en"), "999")
+    t.equal(formatDecimal(1234.25, 1, "en"), "1,234.3")
+  })
 }

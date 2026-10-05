@@ -50,7 +50,7 @@ Item {
 
   SystemPreferences { id: systemPreferences }
 
-  DefinitionsService { id: definitionsService; language: gameController.gameLanguage }
+  DefinitionsService { id: definitionsService; language: gameController.gameLanguage; pluginDir: app.pluginDir }
 
   Sounds {
     id: soundPlayer

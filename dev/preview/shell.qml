@@ -238,12 +238,18 @@ ShellRoot {
         rootShell.selfPlay(sc === "end" ? 80 : 12)
         if (sc === "pending" || sc === "midgame" || sc === "narrow") rootShell.placePending(3)
         if (sc === "settings") view.overlay = "settings"
+        if (sc === "defs") {
+          view.overlay = "settings"
+          if (Quickshell.env("PREVIEW_DEFS_INSTALL") !== "") app.definitions.install(Quickshell.env("PREVIEW_DEFS_INSTALL"))
+          if (Quickshell.env("PREVIEW_DEFS_REMOVE") !== "") Qt.callLater(function() { app.definitions.remove(Quickshell.env("PREVIEW_DEFS_REMOVE")) })
+        }
         if (sc === "stats") view.overlay = "stats"
         if (sc === "end") { if (c.isActive) c.resign() }
         if (sc === "joker") c.jokerRequest = { tileId: 0, row: 0, col: 0 }
         if (sc === "exchange") view.openExchange()
         if (sc === "practice") c.requestHint()
         if (sc === "words" || sc === "words-missing") view.openWords(["SIEGE", "CHAISE", "MOT"], "Vous  ·  H8  ·  24 pts")
+        if (sc === "words-missing" && Quickshell.env("PREVIEW_DEFS_INSTALL") !== "") app.definitions.install(Quickshell.env("PREVIEW_DEFS_INSTALL"))
         return
       }
       if (rootShell.scenario === "keys") { rootShell.runKeys(); return }
@@ -253,7 +259,9 @@ ShellRoot {
       }
       rootShell.step++
       if (rootShell.scenario === "timeout" && rootShell.step === 30) console.log("TIMEOUT " + app.controller.statusJson())
-      if (rootShell.step === (rootShell.scenario === "timeout" ? 30 : 14)) {
+      if (rootShell.step === (rootShell.scenario === "timeout" ? 30 : Number(Quickshell.env("PREVIEW_STEPS")) || 14)) {
+        console.log("DEFS packs " + JSON.stringify(app.definitions.packs))
+        if (app.definitions.job) console.log("DEFS job " + JSON.stringify(app.definitions.job) + " packs " + JSON.stringify(Object.keys(app.definitions.packs).filter(function(k) { return !!app.definitions.packs[k] })))
         content.grabToImage(function(result) {
           result.saveToFile(rootShell.output)
           console.log("PREVIEW_SAVED " + rootShell.output)

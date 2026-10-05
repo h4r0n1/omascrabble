@@ -5,36 +5,95 @@ import "normalize.mjs" as Normalize
 
 // Optional word definitions (Wiktionary, CC BY-SA 4.0), installed per game
 // language by tools/install-definitions.py into
-// $XDG_DATA_HOME/omascrabble/definitions/<lang> as small JSON shards. Shards are read on demand, asynchronously, and treated
-// as untrusted data: parsed, checked, never executed. Without the pack the
-// game simply says how to install it.
+// $XDG_DATA_HOME/omascrabble/definitions/<lang> as small JSON shards. Shards
+// are read on demand, asynchronously, and treated as untrusted data: parsed,
+// checked, never executed.
+//
+// The service also installs and removes packs: it runs the same script with
+// --progress-json (one download at a time) and keeps running while the
+// window is hidden.
 Item {
   id: service
   visible: false
 
+  property string pluginDir: ""
   // Language of the words being looked up: the game's, not the interface's.
   property string language: "fr"
-  readonly property string packDir: {
+  readonly property var languages: ["fr", "en"]
+  readonly property string baseDir: {
     var x = Quickshell.env("XDG_DATA_HOME")
-    return (x && x.charAt(0) === "/" ? x : Quickshell.env("HOME") + "/.local/share") + "/omascrabble/definitions/" + (language === "en" ? "en" : "fr")
+    return (x && x.charAt(0) === "/" ? x : Quickshell.env("HOME") + "/.local/share") + "/omascrabble/definitions"
   }
-  onPackDirChanged: {
+  function dirFor(lang) { return baseDir + "/" + (lang === "en" ? "en" : "fr") }
+  readonly property string packDir: dirFor(language)
+  onPackDirChanged: clearCache()
+
+  // lang → manifest of the installed pack, or null; checked[lang] once read.
+  property var packs: ({})
+  property var packsChecked: ({})
+  readonly property bool checked: packsChecked[language] === true
+  readonly property bool installed: !!packs[language]
+  readonly property var manifest: packs[language] || null
+
+  // The running (or last) download:
+  //   { language, stage: preparing|downloading|writing|done|error|cancelled,
+  //     done, total, kept, error: { code, message } }
+  property var job: null
+  readonly property bool busy: installer.running || remover.running
+  signal installFinished(string language, bool ok)
+
+  function clearCache() {
     cache = ({})
     queue = []
     waiting = ({})
-    checked = false
-    installed = false
-    manifest = null
   }
 
-  property bool checked: false
-  property bool installed: false
-  property var manifest: null
+  function setPack(lang, manifest) {
+    var p = Object.assign({}, packs)
+    p[lang] = manifest
+    packs = p
+    var c = Object.assign({}, packsChecked)
+    c[lang] = true
+    packsChecked = c
+  }
+
+  function install(lang) {
+    if (busy || !pluginDir) return false
+    job = { language: lang, stage: "preparing", done: 0, total: 0, kept: 0, error: null }
+    installer.lastError = null
+    installer.cancelled = false
+    installer.command = ["sh", "-c", 'command -v python3 >/dev/null 2>&1 || exit 127; exec python3 "$@"', "install",
+                         pluginDir + "/tools/install-definitions.py", "--lang", lang, "--progress-json"]
+    installer.running = true
+    return true
+  }
+
+  function cancelInstall() {
+    if (!installer.running) return
+    installer.cancelled = true
+    installer.signal(15) // SIGTERM: the script removes its temporary files
+  }
+
+  function remove(lang) {
+    if (busy) return false
+    remover.language = lang
+    remover.command = ["rm", "-rf", "--", dirFor(lang)]
+    remover.running = true
+    return true
+  }
+
+  function updateJob(fields) {
+    job = Object.assign({}, job || {}, fields)
+  }
+
   property var cache: ({})          // prefix → shard object
   property var queue: []            // prefixes waiting to load
   property var waiting: ({})        // prefix → [callbacks]
 
-  function refresh() { manifestFile.reload() }
+  function refresh() {
+    frManifest.reload()
+    enManifest.reload()
+  }
 
   function prefixOf(folded) { return folded.slice(0, 2) }
 
@@ -120,22 +179,70 @@ Item {
     })
   }
 
-  FileView {
-    id: manifestFile
-    path: service.packDir + "/manifest.json"
+  // One manifest reader per language.
+  component ManifestFile: FileView {
+    property string lang: ""
+    path: service.dirFor(lang) + "/manifest.json"
     printErrors: false
     onLoaded: {
+      var m = null
       try {
-        var m = JSON.parse(text())
-        service.installed = !!m && m.format === "omascrabble-definitions" && m.version === 1
-          && (m.language === undefined || m.language === service.language)
-        service.manifest = service.installed ? m : null
-      } catch (e) {
-        service.installed = false
-      }
-      service.checked = true
+        var parsed = JSON.parse(text())
+        if (parsed && parsed.format === "omascrabble-definitions" && parsed.version === 1
+            && (parsed.language === undefined || parsed.language === lang)) m = parsed
+      } catch (e) {}
+      service.setPack(lang, m)
     }
-    onLoadFailed: function(err) { service.installed = false; service.checked = true }
+    onLoadFailed: function(err) { service.setPack(lang, null) }
+  }
+  ManifestFile { id: frManifest; lang: "fr" }
+  ManifestFile { id: enManifest; lang: "en" }
+
+  Process {
+    id: installer
+    property var lastError: null
+    property bool cancelled: false
+    stdout: SplitParser {
+      onRead: function(line) {
+        var e
+        try { e = JSON.parse(line) } catch (err) { return }
+        if (!e || typeof e.event !== "string") return
+        if (e.event === "start") service.updateJob({ stage: "downloading", total: Number(e.total) || 0 })
+        else if (e.event === "progress") service.updateJob({ stage: "downloading", done: Number(e.done) || 0, total: Number(e.total) || 0, kept: Number(e.kept) || 0 })
+        else if (e.event === "writing") service.updateJob({ stage: "writing", kept: Number(e.kept) || 0 })
+        else if (e.event === "done") service.updateJob({ stage: "done", kept: Number(e.entries) || 0 })
+        else if (e.event === "error") installer.lastError = { code: String(e.code || "other"), message: String(e.message || "").slice(0, 300) }
+      }
+    }
+    stderr: SplitParser {
+      onRead: function(line) { if (String(line).indexOf("error") === 0) installer.lastErrorLine = String(line).slice(0, 300) }
+    }
+    property string lastErrorLine: ""
+    onExited: function(exitCode, exitStatus) {
+      var lang = service.job ? service.job.language : ""
+      var ok = exitCode === 0
+      if (ok) {
+        service.updateJob({ stage: "done" })
+        service.clearCache()
+      } else if (installer.cancelled) {
+        service.updateJob({ stage: "cancelled" })
+      } else {
+        var error = installer.lastError
+          || (exitCode === 127 ? { code: "python", message: "" } : { code: "other", message: installer.lastErrorLine || ("exit " + exitCode) })
+        service.updateJob({ stage: "error", error: error })
+      }
+      service.refresh()
+      service.installFinished(lang, ok)
+    }
+  }
+
+  Process {
+    id: remover
+    property string language: ""
+    onExited: function(exitCode, exitStatus) {
+      if (remover.language === service.language) service.clearCache()
+      service.refresh()
+    }
   }
 
   FileView {

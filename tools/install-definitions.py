@@ -4,6 +4,11 @@
     python3 tools/install-definitions.py               # French (Wiktionnaire)
     python3 tools/install-definitions.py --lang en     # English (Wiktionary)
     python3 tools/install-definitions.py --source extract.jsonl[.gz]
+    python3 tools/install-definitions.py --progress-json   # for the game's UI
+
+The game runs this script itself when you click "Download" (with
+--progress-json: one JSON object per line on stdout, see emit()); it can also
+be run by hand.
 
 The definitions come from Wiktionary — the French Wiktionnaire for French
 games, the English Wiktionary for English games — as extracted by Kaikki.org
@@ -28,6 +33,8 @@ import json
 import os
 import re
 import shutil
+import signal
+import socket
 import sys
 import tempfile
 import time
@@ -56,6 +63,22 @@ PACK_VERSION = 1
 MAX_SENSES = 3
 MAX_GLOSS = 240
 HERE = os.path.dirname(os.path.abspath(__file__))
+JSON_PROGRESS = False
+
+
+def emit(event, **fields):
+    """Progress for the game's UI: {"event": start|progress|writing|done|error, ...}."""
+    if JSON_PROGRESS:
+        fields["event"] = event
+        print(json.dumps(fields), flush=True)
+
+
+class InstallError(Exception):
+    """A failure the UI can explain: code is network | source | disk."""
+
+    def __init__(self, code, message):
+        super().__init__(message)
+        self.code = code
 PLUGIN = os.path.dirname(HERE)
 
 # Same folding as dictionary/normalize.mjs: diacritics and ligatures fold to
@@ -151,7 +174,10 @@ def entry_from(record):
 def open_source(source):
     if re.match(r"^https?://", source):
         print("Downloading", source, file=sys.stderr)
-        stream = urllib.request.urlopen(source, timeout=60)
+        try:
+            stream = urllib.request.urlopen(source, timeout=60)
+        except (OSError, ValueError) as e:
+            raise InstallError("network", str(e))
         total = int(stream.headers.get("Content-Length") or 0)
     else:
         stream = open(source, "rb")
@@ -170,7 +196,10 @@ class CountingReader(io.RawIOBase):
         return True
 
     def readinto(self, b):
-        data = self.inner.read(len(b))
+        try:
+            data = self.inner.read(len(b))
+        except (socket.timeout, ConnectionError) as e:
+            raise InstallError("network", str(e))
         n = len(data)
         b[:n] = data
         self.done += n
@@ -182,39 +211,60 @@ def build(lang, source, lexicon, out_dir):
     print("Playable words:", len(words), file=sys.stderr)
     marks = ('"lang_code": "%s"' % lang, '"lang_code":"%s"' % lang)
     counter, lines = open_source(source)
+    emit("start", lang=lang, total=counter.total, playable=len(words))
     shards = {}
     kept = seen = 0
     started = last_report = time.time()
-    for line in lines:
-        # Cheap prefilter before parsing: entries of the chosen language only.
-        if marks[0] not in line and marks[1] not in line:
-            continue
-        try:
-            record = json.loads(line)
-        except ValueError:
-            continue
-        if record.get("lang_code") != lang or not isinstance(record.get("word"), str):
-            continue
-        seen += 1
-        key = fold(record["word"])
-        if key is None or key not in words:
-            continue
-        entry = entry_from(record)
-        if entry is None:
-            continue
-        shard = shards.setdefault(key[:2], {})
-        shard.setdefault(key, []).append(entry)
-        kept += 1
-        now = time.time()
-        if now - last_report > 2:
-            last_report = now
-            pct = " %d %%" % (100 * counter.done / counter.total) if counter.total else ""
-            print("\r  %d entries read, %d kept%s   " % (seen, kept, pct), end="", file=sys.stderr)
+    try:
+        for line in lines:
+            kept, seen = read_line(line, lang, marks, words, shards, kept, seen)
+            now = time.time()
+            if now - last_report > 0.5:
+                last_report = now
+                pct = " %d %%" % (100 * counter.done / counter.total) if counter.total else ""
+                print("\r  %d entries read, %d kept%s   " % (seen, kept, pct), end="", file=sys.stderr)
+                emit("progress", done=counter.done, total=counter.total, read=seen, kept=kept)
+    except (EOFError, gzip.BadGzipFile, UnicodeDecodeError, zlib_error()) as e:
+        raise InstallError("source", "unreadable download: %s" % e)
     print(file=sys.stderr)
     if kept == 0:
-        raise SystemExit("no definitions found: the source doesn't look like a wiktextract extract for '%s'" % lang)
+        raise InstallError("source", "no definitions found: the source doesn't look like a wiktextract extract for '%s'" % lang)
+    emit("writing", kept=kept)
+    write_pack(lang, source, out_dir, shards, kept, started)
 
-    tmp = tempfile.mkdtemp(prefix=".definitions-", dir=os.path.dirname(out_dir))
+
+def zlib_error():
+    import zlib
+    return zlib.error
+
+
+def read_line(line, lang, marks, words, shards, kept, seen):
+    # Cheap prefilter before parsing: entries of the chosen language only.
+    if marks[0] not in line and marks[1] not in line:
+        return kept, seen
+    try:
+        record = json.loads(line)
+    except ValueError:
+        return kept, seen
+    if record.get("lang_code") != lang or not isinstance(record.get("word"), str):
+        return kept, seen
+    seen += 1
+    key = fold(record["word"])
+    if key is None or key not in words:
+        return kept, seen
+    entry = entry_from(record)
+    if entry is None:
+        return kept, seen
+    shards.setdefault(key[:2], {}).setdefault(key, []).append(entry)
+    return kept + 1, seen
+
+
+def write_pack(lang, source, out_dir, shards, kept, started):
+    parent = os.path.dirname(out_dir)
+    try:
+        tmp = tempfile.mkdtemp(prefix=".definitions-", dir=parent)
+    except OSError as e:
+        raise InstallError("disk", str(e))
     try:
         for prefix, data in shards.items():
             with open(os.path.join(tmp, prefix + ".json"), "w", encoding="utf-8") as f:
@@ -232,27 +282,57 @@ def build(lang, source, lexicon, out_dir):
         if os.path.isdir(out_dir):
             shutil.rmtree(out_dir)
         os.rename(tmp, out_dir)
+    except OSError as e:
+        shutil.rmtree(tmp, ignore_errors=True)
+        raise InstallError("disk", str(e))
     except BaseException:
         shutil.rmtree(tmp, ignore_errors=True)
         raise
     size = sum(os.path.getsize(os.path.join(out_dir, f)) for f in os.listdir(out_dir))
     print("Installed in %s: %d words, %d entries, %.1f MB, in %d s"
           % (out_dir, manifest["words"], kept, size / 1e6, time.time() - started), file=sys.stderr)
+    emit("done", words=manifest["words"], entries=kept, bytes=size, seconds=round(time.time() - started))
+
+
+def remove_stale_temp(parent):
+    """Leftovers of an interrupted run (a killed process can't clean up)."""
+    try:
+        names = os.listdir(parent)
+    except OSError:
+        return
+    for name in names:
+        path = os.path.join(parent, name)
+        if name.startswith(".definitions-") and time.time() - os.path.getmtime(path) > 3600:
+            shutil.rmtree(path, ignore_errors=True)
 
 
 def main():
     data_home = os.environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share")
     parser = argparse.ArgumentParser(description="Installs word definitions (Wiktionary) for Omascrabble.")
     parser.add_argument("--lang", choices=sorted(LANGUAGES), default="fr", help="game language (default: fr)")
-    parser.add_argument("--source", help="wiktextract JSONL(.gz) URL or file (default: the Kaikki.org extract)")
+    parser.add_argument("--source", default=os.environ.get("OMASCRABBLE_DEFINITIONS_SOURCE"),
+                        help="wiktextract JSONL(.gz) URL or file (default: the Kaikki.org extract)")
+    parser.add_argument("--progress-json", action="store_true", help="machine-readable progress on stdout")
     parser.add_argument("--lexicon", help="game word list (default: dictionary/data/open-<lang>.dawg)")
     parser.add_argument("--out", help="pack directory (default: $XDG_DATA_HOME/omascrabble/definitions/<lang>)")
     args = parser.parse_args()
     source = args.source or LANGUAGES[args.lang]["source"]
     lexicon = args.lexicon or os.path.join(PLUGIN, "dictionary", "data", "open-%s.dawg" % args.lang)
     out = args.out or os.path.join(data_home, "omascrabble", "definitions", args.lang)
-    os.makedirs(os.path.dirname(out), exist_ok=True)
-    build(args.lang, source, lexicon, out)
+    global JSON_PROGRESS
+    JSON_PROGRESS = args.progress_json
+    # Cancel from the game sends SIGTERM: unwind normally so temp files go.
+    signal.signal(signal.SIGTERM, lambda *_: sys.exit(143))
+    try:
+        os.makedirs(os.path.dirname(out), exist_ok=True)
+        remove_stale_temp(os.path.dirname(out))
+        build(args.lang, source, lexicon, out)
+    except InstallError as e:
+        emit("error", code=e.code, message=str(e))
+        raise SystemExit("error: " + str(e))
+    except OSError as e:
+        emit("error", code="disk", message=str(e))
+        raise SystemExit("error: " + str(e))
 
 
 if __name__ == "__main__":

@@ -24,7 +24,7 @@ FocusScope {
     var m = Math.round(ms / 60000)
     return m < 1 ? "—" : (m >= 60 ? tr("common.hoursMinutes", { h: Math.floor(m / 60), m: m % 60 }) : tr("common.minutes", { n: m }))
   }
-  function n(v) { return Format.formatInt(v) }
+  function n(v) { return Format.formatInt(v, theme.language) }
   function tr(key, args) { return theme.t(key, args) }
 
   Rectangle { anchors.fill: parent; color: stats.theme.background }
@@ -94,7 +94,7 @@ FocusScope {
             [stats.tr("stats.scrabbles"), stats.n(stats.s.scrabbles), stats.tr("stats.scrabbles.detail")],
             [stats.tr("stats.bestDifficulty"), stats.s.bestDifficultyDefeated ? stats.tr("difficulty." + stats.s.bestDifficultyDefeated) : "—", ""],
             [stats.tr("stats.averageScore"), stats.n(stats.d.averageScore), stats.tr("stats.perGame")],
-            [stats.tr("stats.pointsPerMove"), stats.theme.language === "en" ? String(Math.round(stats.d.averageMoveScore * 10) / 10) : Format.formatDecimal(stats.d.averageMoveScore, 1), stats.tr("stats.onAverage")]
+            [stats.tr("stats.pointsPerMove"), Format.formatDecimal(stats.d.averageMoveScore, 1, stats.theme.language), stats.tr("stats.onAverage")]
           ]
           StatTile { required property var modelData; theme: stats.theme; width: (records.width - (records.columns - 1) * records.spacing) / records.columns; label: modelData[0]; value: modelData[1]; detail: modelData[2] }
         }

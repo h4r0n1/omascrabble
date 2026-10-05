@@ -22,7 +22,9 @@ Dialog {
   onDismissed: closed()
   Keys.onReturnPressed: closed()
 
-  readonly property string installCommand: "python3 ~/.config/omarchy/plugins/omascrabble/tools/install-definitions.py" + (gameLanguage === "en" ? " --lang en" : "")
+  // Look the words up again once a download from this dialog finishes.
+  readonly property bool packInstalled: !!definitions && definitions.installed
+  onPackInstalledChanged: if (open) load()
 
   onOpenChanged: if (open) load()
   onWordsChanged: if (open) load()
@@ -66,26 +68,12 @@ Dialog {
           font.family: dlg.theme.fontFamily
           font.pixelSize: dlg.theme.fontBody
         }
-        Rectangle {
+        DefinitionsPack {
           width: parent.width
-          height: cmd.implicitHeight + 2 * dlg.theme.space
-          radius: dlg.theme.radius
-          color: dlg.theme.panel
-          border.width: 1
-          border.color: dlg.theme.line
-          TextEdit {
-            id: cmd
-            x: dlg.theme.space
-            y: dlg.theme.space
-            width: parent.width - 2 * dlg.theme.space
-            readOnly: true
-            selectByMouse: true
-            wrapMode: TextEdit.WrapAnywhere
-            text: dlg.installCommand
-            color: dlg.theme.foreground
-            font.family: dlg.theme.fontFamily
-            font.pixelSize: dlg.theme.fontSmall
-          }
+          theme: dlg.theme
+          definitions: dlg.definitions
+          language: dlg.gameLanguage === "en" ? "en" : "fr"
+          showCommand: true
         }
       }
 
