@@ -327,7 +327,8 @@ class Helper:
                 continue
             link = s.get("link") if isinstance(s, dict) else None
             key = link.get("peer") if isinstance(link, dict) and link.get("kind") == "tox" else None
-            if not key or len(key) != 64 or s.get("stage") not in ("playing", "ended", "dealing"):
+            # Only a game that really started (the inviter let them in) counts.
+            if not key or len(key) != 64 or s.get("started") is not True:
                 continue
             last = int(os.path.getmtime(os.path.join(self.dir, name)))
             if key not in friends or friends[key]["last"] < last:
@@ -383,7 +384,32 @@ class Helper:
             self.tox = tox_transport.ToxNode(os.path.join(self.dir, "tox.save"), self.name)
             self.tox.on_lobby = self._lobby
             self.tox.on_presence = self._presence
+            # A Tox friendship exists only for friends and for games that
+            # really began; anything else (someone who knocked and was never
+            # let in) is removed.
+            self.tox.prune_friends(set(self.friends) | self._game_peers())
         return self.tox
+
+    def _game_peers(self):
+        """Tox keys of the players of saved games that really began (or of
+        games saved by versions before the knock existed)."""
+        peers = set()
+        for name in os.listdir(self.dir):
+            if not name.endswith(".json") or name in ("friends.json", "nodes.json"):
+                continue
+            try:
+                with open(os.path.join(self.dir, name), encoding="utf-8") as f:
+                    s = json.load(f)
+            except (OSError, ValueError):
+                continue
+            if not isinstance(s, dict):
+                continue
+            link = s.get("link") if isinstance(s.get("link"), dict) else {}
+            began = s.get("started") is True or (
+                "trusted" not in s and "autoAccept" not in s and s.get("stage") in ("playing", "ended") and s.get("seed") is not None)
+            if began and link.get("kind") == "tox" and isinstance(link.get("peer"), str):
+                peers.add(link["peer"].upper())
+        return peers
 
     def _presence(self, key, up):
         if key in self.friends:

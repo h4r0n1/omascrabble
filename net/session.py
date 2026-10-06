@@ -30,6 +30,37 @@ from deck import Deck, CheatDetected, ProtocolError, commitment
 PROTOCOL = 1
 MAX_LOG = 5000
 
+# Which side may receive each message, and in which stages. Anything else is
+# refused before it can change the session: in particular nothing beyond the
+# knock is accepted from someone the inviter hasn't let in.
+ANY = ("inviter", "joiner")
+MESSAGES = {
+    "propose": (("joiner",), ("joining",)),
+    "turned-away": (("joiner",), ("joining",)),
+    "accept": (("inviter",), ("proposed",)),
+    "decline": (("inviter",), ("proposed",)),
+    "commit": (ANY, ("seeding",)),
+    "open": (ANY, ("seeding",)),
+    "deck1": (("joiner",), ("dealing",)),
+    "deck2": (("inviter",), ("dealing",)),
+    "deck3": (("joiner",), ("dealing",)),
+    "deck4": (("inviter",), ("dealing",)),
+    "keys": (ANY, ("playing", "ended")),
+    "move": (ANY, ("playing",)),
+    "rs1": (("joiner",), ("playing",)),
+    "rs2": (("inviter",), ("playing",)),
+    "rs3": (("joiner",), ("playing",)),
+    "rs4": (("inviter",), ("playing",)),
+    "audit": (ANY, ("playing", "ended")),
+    "bye": (ANY, None),
+}
+COMMANDS = {
+    "admit": ("knocking",), "turn-away": ("knocking",),
+    "accept": ("proposed",), "decline": ("proposed",),
+    "give": ("playing",), "open": ("playing",), "move": ("playing",), "reshuffle": ("playing",),
+    "audit": ("playing", "ended"), "resync": None, "bye": None,
+}
+
 # Control characters and bidirectional overrides (which can make a name read
 # as something else) never survive in a name from the other machine.
 _UNSAFE = re.compile("[\x00-\x1f\x7f-\x9f\u200e\u200f\u202a-\u202e\u2066-\u2069]")
@@ -134,9 +165,19 @@ class Session:
         self.connected = False
         self._emit({"ev": "link", "state": "disconnected"})
 
+    def _snapshot(self):
+        return json.dumps(self.s), (self.deck.to_json() if self.deck is not None else None)
+
+    def _restore(self, snapshot):
+        self.s = json.loads(snapshot[0])
+        self.deck = Deck.from_json(snapshot[1]) if snapshot[1] is not None else None
+
     def on_message(self, msg):
         """A message from the other helper. Returns nothing; problems are
-        reported to the game (cheat / error events)."""
+        reported to the game (cheat / error events). A message is applied
+        completely or not at all: if it fails, the session is restored to
+        what it was before it, on disk too."""
+        snapshot = self._snapshot()
         try:
             if not isinstance(msg, dict) or not isinstance(msg.get("t"), str):
                 raise ProtocolError("malformed message")
@@ -152,33 +193,45 @@ class Session:
                 # A gap: ask for a resend from where we are.
                 self._send_raw({"t": "hello", "v": PROTOCOL, "session": self.s.get("id"), "name": self.s["name"], "have": self.s["inSeq"]})
                 return
-            self.s["inSeq"] = seq
-            handler = getattr(self, "_on_" + msg["t"].replace("-", "_"), None)
-            if handler is None:
+            rule = MESSAGES.get(msg["t"])
+            if rule is None:
                 raise ProtocolError("unknown message %r" % msg["t"])
-            handler(msg)
+            roles, stages = rule
+            if self.s["role"] not in roles or (stages is not None and self.s["stage"] not in stages):
+                raise ProtocolError("message %r not allowed now" % msg["t"])
+            self.s["inSeq"] = seq
+            getattr(self, "_on_" + msg["t"].replace("-", "_"))(msg)
             self._save()
         except CheatDetected as e:
+            self._restore(snapshot)
             self.s["stage"] = "invalid"
             self._save()
             self._emit({"ev": "cheat", "message": str(e)})
         except Exception as e:  # malformed or hostile input must never stop the helper
+            self._restore(snapshot)
+            self._save()
             self._emit({"ev": "error", "code": "protocol", "message": str(e)})
 
     # ------------------------------------------------------------ game side
     def command(self, cmd):
+        snapshot = self._snapshot()
         try:
             name = cmd.get("cmd")
-            handler = getattr(self, "_cmd_" + str(name).replace("-", "_"), None)
-            if handler is None:
+            if name not in COMMANDS:
                 raise ProtocolError("unknown command %r" % name)
-            handler(cmd)
+            stages = COMMANDS[name]
+            if stages is not None and self.s["stage"] not in stages:
+                raise ProtocolError("command %r not allowed now" % name)
+            getattr(self, "_cmd_" + str(name).replace("-", "_"))(cmd)
             self._save()
         except CheatDetected as e:
+            self._restore(snapshot)
             self.s["stage"] = "invalid"
             self._save()
             self._emit({"ev": "cheat", "message": str(e)})
         except Exception as e:  # malformed or hostile input must never stop the helper
+            self._restore(snapshot)
+            self._save()
             self._emit({"ev": "error", "code": "command", "message": str(e)})
 
     # ------------------------------------------------------------ handshake
@@ -212,6 +265,9 @@ class Session:
         self._save()
 
     def _propose(self):
+        # Proposing is the inviter's consent: a trusted friend's call, or
+        # "Let in". No game can start without it.
+        self.s["admitted"] = True
         self.s["stage"] = "proposed"
         self._send({"t": "propose", "game": self.s["id"], "config": self.s["config"], "now": self.s["now"],
                     "name": self.s["name"], "tiles": self.s["tiles"]})
@@ -254,6 +310,7 @@ class Session:
     def _cmd_accept(self, cmd):
         if self.s["role"] != "joiner" or self.s["stage"] != "proposed":
             raise ProtocolError("nothing to accept")
+        self.s["admitted"] = True  # the joiner consents by accepting
         self.s["stage"] = "seeding"
         self._send({"t": "accept"})
         self._commit()
@@ -338,7 +395,10 @@ class Session:
         self._started()
 
     def _started(self):
+        if not self.s.get("admitted") or self.s.get("seed") is None:
+            raise ProtocolError("a game can't start before the players agreed")
         self.s["stage"] = "playing"
+        self.s["started"] = True   # the only proof, on disk, that this game really began
         names = [self.s["name"], self.s.get("peerName", "")]
         if self.s["seat"] == 1:
             names.reverse()

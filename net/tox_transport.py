@@ -80,6 +80,8 @@ def _load():
         "tox_friend_get_public_key": (ctypes.c_bool, [c_tox, ctypes.c_uint32, u8p, err]),
         "tox_friend_get_connection_status": (ctypes.c_int, [c_tox, ctypes.c_uint32, err]),
         "tox_friend_delete": (ctypes.c_bool, [c_tox, ctypes.c_uint32, err]),
+        "tox_self_get_friend_list_size": (ctypes.c_size_t, [c_tox]),
+        "tox_self_get_friend_list": (None, [c_tox, ctypes.POINTER(ctypes.c_uint32)]),
         "tox_friend_send_lossless_packet": (ctypes.c_bool, [c_tox, ctypes.c_uint32, u8p, ctypes.c_size_t, err]),
         "tox_callback_friend_request": (None, [c_tox, ctypes.c_void_p]),
         "tox_callback_friend_connection_status": (None, [c_tox, ctypes.c_void_p]),
@@ -419,6 +421,24 @@ class ToxNode:
             return False
         self.send(n, msg)
         return True
+
+    def friend_keys(self):
+        count = self.lib.tox_self_get_friend_list_size(self.tox)
+        numbers = (ctypes.c_uint32 * max(1, count))()
+        self.lib.tox_self_get_friend_list(self.tox, numbers)
+        return {self.public_key_of(numbers[i]): numbers[i] for i in range(count)}
+
+    def prune_friends(self, keep):
+        """Delete every Tox friendship not in `keep` (public keys)."""
+        keep = {k.upper() for k in keep}
+        removed = 0
+        for key, number in self.friend_keys().items():
+            if key not in keep:
+                self.lib.tox_friend_delete(self.tox, number, None)
+                removed += 1
+        if removed:
+            self.save()
+        return removed
 
     def forget(self, public_key_hex):
         n = self.friend_number(public_key_hex)

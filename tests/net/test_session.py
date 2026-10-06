@@ -219,6 +219,64 @@ class SessionTest(unittest.TestCase):
         self.assertEqual(S.clean_name("Ben\u202e\x07 "), "Ben")
         self.assertEqual(len(S.clean_name("x" * 99)), 40)
 
+    def test_nothing_beyond_the_knock_before_being_let_in(self):
+        # The admission bypass reported in review: a forged deck4 while
+        # knocking must not start (or save) anything.
+        import json
+        import deck as D
+        p = self.pair
+        a, b = p.sides[0], p.sides[1]
+        a.new_invite({"gameLanguage": "fr"}, "Ana", TILES)
+        a.precompute()
+        b.new_join("Mallory", TILES)
+        p.connect()
+        self.assertEqual(a.stage, "knocking")
+        forged = [format(pow(D.encode(i), 3, D.P), "x") for i in range(TILES)]
+        for t, extra in (("deck4", {"values": forged}), ("deck2", {"values": forged}), ("commit", {"hash": "0" * 64}),
+                         ("open", {"nonce": "00"}), ("keys", {"keys": {}}), ("accept", {}),
+                         ("move", {"action": {"type": "pass", "player": 1}, "keys": {}, "claims": {}, "index": 0}),
+                         ("audit", {"keys": {}}), ("rs2", {"values": forged})):
+            before = dict(a.s)
+            a.on_message(dict({"t": t, "seq": a.s["inSeq"] + 1}, **extra))
+            self.assertEqual(a.stage, "knocking", t)
+            self.assertEqual(json.load(open(a.path))["stage"], "knocking", t + " (saved)")
+            self.assertEqual(a.s["inSeq"], before["inSeq"], t + ": a refused message changes nothing")
+            self.assertIsNone(p.last(0, "started"), t)
+            self.assertFalse(a.s.get("started") or a.s.get("admitted"), t)
+        # Only the inviter's "Let in" opens the way.
+        p.command(0, {"cmd": "admit"})
+        self.assertTrue(a.s["admitted"])
+
+    def test_messages_in_the_wrong_order_are_refused(self):
+        p = self.pair
+        game_id = start(p)
+        a, b = p.sides[0], p.sides[1]
+        # The game is playing: setup and handshake messages are no longer accepted.
+        for side, t in ((1, "propose"), (0, "accept"), (1, "deck1"), (0, "deck4"), (1, "turned-away"), (0, "commit")):
+            s = p.sides[side]
+            stage = s.stage
+            s.on_message({"t": t, "seq": s.s["inSeq"] + 1, "values": [], "config": {}, "hash": "0" * 64, "now": 0, "tiles": TILES})
+            self.assertEqual(s.stage, stage, t)
+            self.assertEqual(p.last(side, "error")["code"], "protocol", t)
+        # And a command out of place is refused too.
+        p.command(1, {"cmd": "admit"})
+        self.assertEqual(p.last(1, "error")["code"], "command")
+
+    def test_a_failed_message_leaves_no_trace(self):
+        import json
+        p = self.pair
+        start(p)
+        b = p.sides[1]
+        before = json.load(open(b.path))
+        # Valid until the last key: the first reveal would be recorded, then the
+        # second fails; nothing of it may remain.
+        b.on_message({"t": "move", "seq": b.s["inSeq"] + 1, "action": {"type": "play", "player": 0},
+                      "keys": {"0": "2", "1": "zz"}, "claims": {"0": 1, "1": 2}, "index": 0})
+        after = json.load(open(b.path))
+        self.assertEqual(after["inSeq"], before["inSeq"])
+        self.assertEqual(after["claims"], before["claims"])
+        self.assertEqual(after["inbound"], before["inbound"])
+
     def test_hostile_shapes_never_crash_the_session(self):
         p = self.pair
         start(p)

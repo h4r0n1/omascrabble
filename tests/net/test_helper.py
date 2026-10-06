@@ -200,7 +200,12 @@ class FriendsFromGamesTest(unittest.TestCase):
             os.makedirs(online)
             key = "AB" * 32
             with open(os.path.join(online, "0123456789abcdef.json"), "w") as f:
-                json.dump({"stage": "ended", "peerName": "Sultan", "link": {"kind": "tox", "peer": key}}, f)
+                json.dump({"stage": "ended", "started": True, "peerName": "Sultan", "link": {"kind": "tox", "peer": key}}, f)
+            # Saved as "playing" but never started (what the admission bypass
+            # left behind): not a friend.
+            with open(os.path.join(online, "aaaaaaaaaaaaaaaa.json"), "w") as f:
+                json.dump({"stage": "playing", "trusted": False, "peerName": "Mallory",
+                           "link": {"kind": "tox", "peer": "CD" * 32}}, f)
             with open(os.path.join(online, "fedcba9876543210.json"), "w") as f:
                 json.dump({"stage": "inviting", "peerName": "", "link": {"kind": "tox", "role": "inviter"}}, f)
             p = Proc(root)
@@ -217,6 +222,30 @@ class FriendsFromGamesTest(unittest.TestCase):
             p2.send({"cmd": "hello", "name": "Me"})
             self.assertEqual(wait_for([p2], 0, "friends")["list"], [])
             p2.close()
+        finally:
+            shutil.rmtree(root)
+
+
+class ToxPruneTest(unittest.TestCase):
+    """Needs toxcore (no network): only friends and players of games that
+    began keep a Tox friendship."""
+
+    def test_unadmitted_peers_lose_their_tox_friendship(self):
+        sys.path.insert(0, os.path.dirname(HELPER))
+        sys.dont_write_bytecode = True
+        import tox_transport as T
+        if not T.available():
+            self.skipTest("toxcore not installed")
+        root = tempfile.mkdtemp()
+        try:
+            node = T.ToxNode(os.path.join(root, "tox.save"), "Test")
+            friend_key, stranger_key = "11" * 32, "22" * 32
+            for key in (friend_key, stranger_key):
+                node.lib.tox_friend_add_norequest(node.tox, T._buf(bytes.fromhex(key)), None)
+            self.assertEqual(set(node.friend_keys()), {friend_key, stranger_key})
+            self.assertEqual(node.prune_friends({friend_key}), 1)
+            self.assertEqual(set(node.friend_keys()), {friend_key})
+            node.close()
         finally:
             shutil.rmtree(root)
 

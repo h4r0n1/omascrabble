@@ -107,7 +107,13 @@ the inviter's game shows their name and an eight-digit **safety code**
 derived from both Tox public keys (the same on both screens, different for
 anyone else), and the inviter admits them (`admit` → `propose`) or turns
 them away (`turn-away` → `turned-away`; their Tox friendship is removed).
-Nobody is saved as a friend before a game has started. A call to a friend
+Nobody is saved as a friend before a game has started: each message is
+accepted only by the right side and in the right stage (nothing beyond the
+knock before "Let in"), a message is applied completely or not at all (a
+failure restores the session, on disk too), a game can only start once the
+inviter has admitted the joiner (`admitted`), and only a session marked
+`started` counts as a game that began. At startup the helper removes any Tox
+friendship that isn't a friend or the player of such a game. A call to a friend
 from the friends list is bound to that friend's public key and needs no
 knock. The link never appears in a process's arguments (it's copied through
 `wl-copy`'s standard input), and direct `tcp` links are refused outside test
