@@ -18,6 +18,7 @@ directory, readable by the user only.
 
 import ctypes
 import ctypes.util
+import hashlib
 import ipaddress
 import json
 import os
@@ -70,6 +71,7 @@ def _load():
         "tox_iteration_interval": (ctypes.c_uint32, [c_tox]),
         "tox_iterate": (None, [c_tox, ctypes.c_void_p]),
         "tox_self_get_address": (None, [c_tox, u8p]),
+        "tox_self_get_public_key": (None, [c_tox, u8p]),
         "tox_self_get_connection_status": (ctypes.c_int, [c_tox]),
         "tox_self_set_name": (ctypes.c_bool, [c_tox, u8p, ctypes.c_size_t, err]),
         "tox_friend_add": (ctypes.c_uint32, [c_tox, u8p, u8p, ctypes.c_size_t, err]),
@@ -97,6 +99,23 @@ def available():
         return True
     except OSError:
         return False
+
+
+def safety_code(key_a, key_b):
+    """Eight digits both machines can show: derived from the two Tox public
+    keys, so a stranger using a stolen link shows a different code."""
+    a, b = sorted([key_a.upper(), key_b.upper()])
+    digest = hashlib.sha256(bytes.fromhex(a) + bytes.fromhex(b)).digest()
+    n = int.from_bytes(digest[:6], "big") % 100000000
+    return "%04d %04d" % (n // 10000, n % 10000)
+
+
+def invite_accepts(link, key, now=None):
+    """May the friend with this public key use this invitation? A call to a
+    friend is bound to that friend; a link expires."""
+    if link.get("expect") and link["expect"].upper() != key.upper():
+        return False
+    return (now or time.time()) <= link.get("expires", float("inf"))
 
 
 def _buf(data):
@@ -171,6 +190,11 @@ class ToxNode:
         self.lib.tox_self_get_address(self.tox, out)
         return bytes(out).hex().upper()
 
+    def public_key(self):
+        out = (ctypes.c_uint8 * PUBLIC_KEY_SIZE)()
+        self.lib.tox_self_get_public_key(self.tox, out)
+        return bytes(out).hex().upper()
+
     def save(self):
         size = self.lib.tox_get_savedata_size(self.tox)
         out = (ctypes.c_uint8 * size)()
@@ -219,14 +243,21 @@ class ToxNode:
                     continue
             if host is None:
                 continue
-            used += 1
             try:
-                key = _buf(bytes.fromhex(n["public_key"]))
+                key_hex = str(n["public_key"])
+                if len(key_hex) != PUBLIC_KEY_SIZE * 2:
+                    continue
+                key = _buf(bytes.fromhex(key_hex))
+                port = int(n["port"])
+                if not 0 < port < 65536:
+                    continue
+                used += 1
                 host = host.encode()
                 if n.get("status_udp"):
-                    self.lib.tox_bootstrap(self.tox, host, int(n["port"]), key, None)
-                for port in (n.get("tcp_ports") or [])[:2]:
-                    self.lib.tox_add_tcp_relay(self.tox, host, int(port), key, None)
+                    self.lib.tox_bootstrap(self.tox, host, port, key, None)
+                for tcp_port in (n.get("tcp_ports") or [])[:2]:
+                    if isinstance(tcp_port, int) and 0 < tcp_port < 65536:
+                        self.lib.tox_add_tcp_relay(self.tox, host, tcp_port, key, None)
             except (KeyError, TypeError, ValueError):
                 continue
         self._bootstrapped = time.time()
@@ -280,10 +311,10 @@ class ToxNode:
             secret = text.split(" ", 1)[0]
             peer = None
             for s, p in self.invites.items():
-                if secrets.compare_digest(s, secret):
+                if secrets.compare_digest(s, secret) and invite_accepts(p.link, key):
                     peer = p
             if peer is None:
-                return  # not one of our invitations: ignore
+                return  # not one of our invitations (or expired, or meant for someone else): ignore
             del self.invites[peer.link["secret"]]
             friend = self.lib.tox_friend_add_norequest(self.tox, _buf(bytes.fromhex(key)), None)
             if friend == 0xFFFFFFFF:
@@ -294,6 +325,12 @@ class ToxNode:
             pass
 
     def _on_connection(self, tox, friend, status, user):
+        try:
+            self._connection(friend, status)
+        except Exception:
+            pass
+
+    def _connection(self, friend, status):
         key = self.public_key_of(friend)
         up = status != CONNECTION_NONE
         if not up:
@@ -313,7 +350,12 @@ class ToxNode:
     def _on_packet(self, tox, friend, data, length, user):
         if length <= 0:
             return
-        packet = bytes(data[:length])
+        try:
+            self._packet(friend, bytes(data[:min(length, MAX_PACKET)]))
+        except Exception:
+            pass
+
+    def _packet(self, friend, packet):
         if packet[0] not in (MORE, LAST):
             return
         buf = self._buffers.get(friend, b"") + packet[1:]
@@ -337,7 +379,7 @@ class ToxNode:
                 return  # already playing with this friend: a reconnection
             secret = str(msg.get("secret", ""))
             for s, p in list(self.invites.items()):
-                if secrets.compare_digest(s, secret):
+                if secrets.compare_digest(s, secret) and invite_accepts(p.link, key):
                     del self.invites[s]
                     p.bind(key)
                     return

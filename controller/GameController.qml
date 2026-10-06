@@ -615,6 +615,7 @@ QtObject {
 
   function onOnlineEvent(ev) {
     if (ev.ev === "started") { if (!game || game.gameId !== ev.gameId) startOnlineGame(ev); return }
+    if (ev.ev === "knock" && !windowActive) { notify(tr("online.notify.title"), tr("online.notify.knock")); return }
     if (!isOnline) return
     if (ev.gameId && ev.gameId !== game.gameId) return
     if (!provider && (ev.ev === "action" || ev.ev === "audited")) { onlineQueue = onlineQueue.concat([ev]); return }
@@ -677,7 +678,7 @@ QtObject {
       return
     }
     if (!windowActive && isActive && game.current === viewer) {
-      notify(tr("online.notify.title"), tr("online.notify.yourTurn", { name: playerLabel(a.player) }))
+      notify(tr("online.notify.title"), tr("online.notify.yourTurn"))
     }
   }
 

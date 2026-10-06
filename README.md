@@ -212,9 +212,12 @@ settings. Tests use fixed seeds.
 ## Online play (optional)
 
 Play with a friend on another Omarchy machine. **New game → Online → Invite**
-gives you a one-time link (`omascrabble://tox/…`); send it any way you like.
-Your friend opens **Home → Join a game**, pastes it and accepts your
-invitation; the two machines shuffle the bag together and the game starts on
+gives you a one-time link (`omascrabble://tox/…`, valid for 24 hours); send
+it any way you like. Your friend opens **Home → Join a game** and pastes it.
+**A link alone never lets anyone in:** you see who is knocking with a
+**safety code**, the same on both screens — check it with your friend (by
+phone or message), then **Let in** or **Turn away**. Your friend accepts your
+invitation, the two machines shuffle the bag together and the game starts on
 both. A game carries on after a restart or a dropped connection, and a
 notification tells you when it's your turn while the window is closed.
 

@@ -35,6 +35,14 @@ Item {
   property var friends: []           // [{ id, name, online, last }]
   property var calling: null         // { friend, online } while our call waits
   property var incomingCall: null    // { friend, name, config } from a friend
+
+  // Someone used our link and waits to be let in: { name, code }. A link
+  // alone never lets anyone in; the inviter checks the name and the safety
+  // code (the same on both screens) first.
+  property var knock: null
+  property string rejectedName: ""   // the last person we turned away
+  property string safetyCode: ""     // joiner: the code the inviter will check
+  property bool turnedAway: false    // joiner: the inviter didn't let us in
   signal friendsKnown()
 
   signal event(var ev)
@@ -71,15 +79,20 @@ Item {
     hello()
   }
 
-  function invite(config) {
+  function resetFlow() {
     lastError = null; link = ""; proposal = null; peerName = ""; peerConnected = false
+    knock = null; rejectedName = ""; safetyCode = ""; turnedAway = false
+  }
+
+  function invite(config) {
+    resetFlow()
     stage = "inviting"
     hello()
     send({ cmd: "invite", config: config })
   }
 
   function join(text, tiles) {
-    lastError = null; link = ""; proposal = null; peerName = ""; peerConnected = false
+    resetFlow()
     stage = "joining"
     hello()
     send({ cmd: "join", link: String(text).trim(), tiles: tiles })
@@ -109,7 +122,9 @@ Item {
 
   function accept() { stage = "dealing"; send({ cmd: "accept" }) }
   function decline() { stage = ""; send({ cmd: "decline" }) }
-  function cancel() { stage = ""; link = ""; proposal = null; calling = null; send({ cmd: "cancel" }) }
+  function cancel() { stage = ""; link = ""; proposal = null; calling = null; knock = null; send({ cmd: "cancel" }) }
+  function admit() { knock = null; stage = "dealing"; send({ cmd: "admit" }) }
+  function turnAway() { send({ cmd: "turn-away" }) }
 
   function resume(gameId, moves) {
     hello()
@@ -143,6 +158,23 @@ Item {
     case "declined":
       stage = "declined"
       calling = null
+      break
+    case "knock":
+      knock = { name: Format.cleanName(ev.name), code: typeof ev.code === "string" ? ev.code.slice(0, 12) : "" }
+      stage = "knock"
+      break
+    case "rejected":
+      rejectedName = Format.cleanName(ev.name)
+      knock = null
+      link = ""
+      stage = "rejected"
+      break
+    case "joining":
+      safetyCode = typeof ev.code === "string" ? ev.code.slice(0, 12) : ""
+      break
+    case "turned-away":
+      turnedAway = true
+      stage = "declined"
       break
     case "friends":
       friends = Array.isArray(ev.list) ? ev.list.filter(function(f) { return f && typeof f.id === "string" }).map(function(f) {

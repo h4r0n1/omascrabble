@@ -33,7 +33,9 @@ import time  # noqa: E402
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
-from session import Session, clean_name  # noqa: E402
+from session import Session, clean_name, clean_config  # noqa: E402
+
+INVITE_LIFETIME = 24 * 3600
 
 MAX_LINE = 2 * 1024 * 1024
 TILES = {"fr": 102, "en": 100}
@@ -199,6 +201,10 @@ def parse_link(text):
     if not secret or not all(c in "0123456789abcdef" for c in secret) or len(secret) > 64:
         raise ValueError("not an Omascrabble invitation")
     if kind == "tcp":
+        # Direct connections are for tests only: a pasted link must never make
+        # the helper connect to an arbitrary address.
+        if os.environ.get("OMASCRABBLE_TRANSPORT") != "tcp":
+            raise ValueError("not an Omascrabble invitation")
         host, _, port = where.rpartition(":")
         return {"kind": "tcp", "role": "joiner", "host": host, "port": int(port), "secret": secret}
     if kind == "tox":
@@ -215,6 +221,7 @@ class Helper:
         self.dir = os.path.join(state_dir, "omascrabble", "online")
         os.makedirs(self.dir, mode=0o700, exist_ok=True)
         os.chmod(self.dir, 0o700)
+        self._prune_stale_invitations()
         self.sel = selectors.DefaultSelector()
         self.session = None
         self.transport = None
@@ -224,6 +231,7 @@ class Helper:
         self.friends = self._load_friends()   # Tox public key -> {"name", "last"}
         self.calling = None       # our call to a friend: {"friend", "secret", "config", "sent"}
         self.incoming = {}        # friend -> their call to us
+        self.forget_later = []    # (public key, when): strangers turned away, once the "no" is sent
 
     # transport plumbing
     def _send(self, msg):
@@ -271,6 +279,24 @@ class Helper:
         if self.transport is not None:
             self.transport.close()
             self.transport = None
+
+    def _prune_stale_invitations(self):
+        """Invitations that never became a game don't keep their secret on
+        disk past their lifetime."""
+        unfinished = ("inviting", "knocking", "turned-away", "joining", "proposed", "declined", None)
+        for name in os.listdir(self.dir):
+            if not name.endswith(".json") or name in ("friends.json", "nodes.json"):
+                continue
+            path = os.path.join(self.dir, name)
+            try:
+                if time.time() - os.path.getmtime(path) < INVITE_LIFETIME:
+                    continue
+                with open(path, encoding="utf-8") as f:
+                    stage = json.load(f).get("stage")
+                if stage in unfinished:
+                    os.unlink(path)
+            except (OSError, ValueError, AttributeError):
+                continue
 
     # ------------------------------------------------------------ friends
     def _friends_path(self):
@@ -325,9 +351,19 @@ class Helper:
             out.append({"id": key, "name": f.get("name", ""), "online": online, "last": f.get("last", 0)})
         emit({"ev": "friends", "list": out})
 
+    def _safety_code(self):
+        link = self.transport.link if self.transport is not None else {}
+        if self.tox is None or link.get("kind") != "tox" or not link.get("peer"):
+            return None
+        import tox_transport
+        return tox_transport.safety_code(self.tox.public_key(), link["peer"])
+
     def _session_event(self, ev):
-        # Anyone we really play with over Tox becomes a friend we can call.
-        if ev.get("ev") in ("peer", "started") and self.transport is not None and self.transport.kind == "tox":
+        if ev.get("ev") == "knock":
+            ev["code"] = self._safety_code()
+        # Someone we really play with over Tox (the game has started, so the
+        # inviter let them in) becomes a friend we can call.
+        if ev.get("ev") == "started" and self.transport is not None and self.transport.kind == "tox":
             key = self.transport.link.get("peer")
             name = self.session.s.get("peerName", "") if self.session else ""
             if key and len(key) == 64:
@@ -337,8 +373,8 @@ class Helper:
                 self.friends[key] = entry
                 self._save_friends()
                 self._friends_event()
-            if ev.get("ev") == "started":
-                self.calling = None
+        if ev.get("ev") == "started":
+            self.calling = None
         emit(ev)
 
     def _ensure_tox(self):
@@ -369,9 +405,10 @@ class Helper:
         if not secret or len(secret) > 64 or not all(ch in "0123456789abcdef" for ch in secret):
             return
         if kind == "call" and isinstance(msg.get("config"), dict):
-            self.incoming[key] = {"secret": secret, "config": msg["config"]}
+            config = clean_config(msg["config"])
+            self.incoming[key] = {"secret": secret, "config": config}
             emit({"ev": "call", "friend": key, "name": self.friends[key].get("name") or clean_name(msg.get("name", "")),
-                  "config": msg["config"]})
+                  "config": config})
         elif kind == "call-cancel":
             if self.incoming.get(key, {}).get("secret") == secret:
                 del self.incoming[key]
@@ -389,7 +426,9 @@ class Helper:
         if self._transport_kind() != "tox":
             raise ValueError("calling a friend needs toxcore")
         self._ensure_tox()
-        self._invite({"config": cmd.get("config") or {}}, announce=False)
+        # Bound to this friend: nobody else can use the call's secret, and
+        # the friend doesn't need letting in.
+        self._invite({"config": cmd.get("config") or {}}, announce=False, expect=key)
         self.calling = {"friend": key, "secret": self.transport.link["secret"], "config": cmd.get("config") or {}, "sent": False}
         self._send_call()
 
@@ -446,6 +485,8 @@ class Helper:
                     self.tox.send_to(self.calling["friend"], {"t": "call-cancel", "secret": self.calling["secret"]})
                 self.calling = None
                 self._cancel()
+            elif name == "turn-away":
+                self._turn_away()
             elif name == "friends":
                 self._friends_event()
             elif name == "call":
@@ -464,8 +505,23 @@ class Helper:
             emit({"ev": "error", "code": "link", "message": str(e)})
         except OSError as e:
             emit({"ev": "error", "code": "network", "message": str(e)})
+        except Exception as e:  # never let one bad command stop the helper
+            emit({"ev": "error", "code": "internal", "message": "%s: %s" % (type(e).__name__, e)})
 
-    def _invite(self, cmd, announce=True):
+    def _turn_away(self):
+        """The inviter doesn't let the knocking player in: tell them, end the
+        invitation and drop the Tox friendship their request created."""
+        if self.session is None or self.session.stage != "knocking":
+            raise ValueError("nobody is waiting to be let in")
+        name = self.session.s.get("peerName", "")
+        self.session.command({"cmd": "turn-away"})
+        key = self.transport.link.get("peer") if self.transport is not None else None
+        if key and key not in self.friends:
+            self.forget_later.append((key, time.time() + 5))
+        self._cancel()
+        emit({"ev": "rejected", "name": name})
+
+    def _invite(self, cmd, announce=True, expect=None):
         kind = self._transport_kind()
         if kind == "none":
             emit({"ev": "error", "code": "notox", "message": "toxcore is not installed"})
@@ -474,12 +530,17 @@ class Helper:
         tiles = TILES.get(str(cmd.get("config", {}).get("gameLanguage", "fr")), 102)
         self.session = Session(self._path("invite-" + secrets.token_hex(4)), self._send, self._session_event)
         first = self.session.path
-        game_id = self.session.new_invite(cmd.get("config") or {}, self.name, tiles)
+        game_id = self.session.new_invite(cmd.get("config") or {}, self.name, tiles, trusted=expect is not None)
         self.session.path = self._path(game_id)
         self.session._save()
         os.unlink(first)
         link = {"secret": secrets.token_hex(16)}
-        link = TcpTransport.invite(link) if kind == "tcp" else {"kind": "tox", "role": "inviter", "secret": link["secret"]}
+        if kind == "tcp":
+            link = TcpTransport.invite(link)
+        else:
+            link = {"kind": "tox", "role": "inviter", "secret": link["secret"], "expires": time.time() + INVITE_LIFETIME}
+            if expect:
+                link["expect"] = expect
         self._open_transport(link)
         self._remember_link()
         if announce:
@@ -495,7 +556,7 @@ class Helper:
         self.session.new_join(self.name, tiles, auto_accept)
         self._open_transport(link)
         self._remember_link()
-        emit({"ev": "joining"})
+        emit({"ev": "joining", "code": self._safety_code()})
 
     def _resume(self, cmd):
         game_id = str(cmd.get("gameId", ""))
@@ -519,8 +580,14 @@ class Helper:
         self.session.command({"cmd": "resync", "moves": int(cmd.get("moves", 0))})
 
     def _cancel(self, keep=False):
+        # A stranger still knocking when the invitation ends isn't kept as a
+        # Tox friend.
+        if self.session is not None and not keep and self.session.stage == "knocking" and self.transport is not None:
+            key = self.transport.link.get("peer")
+            if key and key not in self.friends:
+                self.forget_later.append((key, time.time()))
         self._close_transport()
-        if self.session is not None and not keep and self.session.stage in ("inviting", "joining", "proposed", "declined"):
+        if self.session is not None and not keep and self.session.stage in ("inviting", "knocking", "turned-away", "joining", "proposed", "declined"):
             try:
                 os.unlink(self.session.path)
             except OSError:
@@ -560,6 +627,12 @@ class Helper:
             now = time.time()
             if self.tox is not None:
                 self.tox.iterate()
+                due = [k for k, when in self.forget_later if when <= now]
+                if due:
+                    self.forget_later = [(k, w) for k, w in self.forget_later if w > now]
+                    for key in due:
+                        if key not in self.friends and key not in self.tox.peers:
+                            self.tox.forget(key)
             if self.transport is not None:
                 self.transport.tick(now)
         self._close_transport()

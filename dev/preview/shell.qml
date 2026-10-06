@@ -94,7 +94,11 @@ ShellRoot {
       }
       return
     }
-    if (onlineStage === "invited" && app.online.link !== "") { linkFile.setText(app.online.link); onlineLog("link " + app.online.link); onlineStage = "waitgame" }
+    if (onlineStage === "invited" && app.online.link !== "") { linkFile.setText(app.online.link); onlineLog("link " + app.online.link); onlineStage = "waitknock" }
+    if (onlineStage === "waitknock") {
+      if (app.online.stage === "knock" && app.online.knock) { onlineLog("knock from " + app.online.knock.name); app.online.admit(); onlineStage = "waitgame" }
+      return
+    }
     if (onlineStage === "waitlink") {
       linkFile.reload()
       var text = String(linkFile.text() || "").trim()
@@ -326,6 +330,26 @@ ShellRoot {
           return
         }
         if (sc === "online-join") { view.openOnline("join"); return }
+        if (sc === "online-knock") {
+          app.saves.saveSettings(Object.assign({}, app.saves.settings, { online: Object.assign({}, app.saves.settings.online, { name: "Ana" }) }))
+          view.openOnline("invite")
+          app.online.transport = "tcp"
+          app.online.handle({ ev: "knock", name: "Ben", code: "4821 0937" })
+          return
+        }
+        if (sc === "online-waiting") {
+          view.openOnline("join")
+          app.online.transport = "tcp"
+          app.online.stage = "joining"
+          app.online.handle({ ev: "joining", code: "4821 0937" })
+          return
+        }
+        if (sc === "online-rejected") {
+          view.openOnline("invite")
+          app.online.transport = "tcp"
+          app.online.handle({ ev: "rejected", name: "Mallory" })
+          return
+        }
         // Screenshots never show the machine's user name.
         if (sc.indexOf("online-") === 0)
           app.saves.saveSettings(Object.assign({}, app.saves.settings, { online: Object.assign({}, app.saves.settings.online, { name: "Ana" }) }))

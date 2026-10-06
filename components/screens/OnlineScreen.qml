@@ -55,7 +55,16 @@ FocusScope {
   }
 
   property bool copied: false
-  Process { id: copier }
+  // The link holds the invitation's secret: it reaches wl-copy on its
+  // standard input, never as an argument (other users can read process
+  // arguments).
+  Process {
+    id: copier
+    property string pending: ""
+    command: ["wl-copy"]
+    stdinEnabled: true
+    onStarted: { write(pending); pending = ""; stdinEnabled = false }
+  }
 
   Keys.onEscapePressed: closed()
 
@@ -268,7 +277,7 @@ FocusScope {
 
         // ---------------------------------------------------- invite
         SettingsCard {
-          visible: page.mode === "invite" && !!page.online && page.online.stage !== "calling"
+          visible: page.mode === "invite" && !!page.online && ["calling", "knock", "rejected", "dealing"].indexOf(page.online.stage) === -1
           width: parent.width
           theme: page.theme
           title: page.tr(page.online && page.online.friends.length > 0 ? "online.link.new" : "online.link")
@@ -301,7 +310,9 @@ FocusScope {
                 enabled: !!page.online && page.online.link !== ""
                 text: page.tr(page.copied ? "online.copied" : "online.copy")
                 onClicked: {
-                  copier.command = ["wl-copy", "--", page.online.link]
+                  if (copier.running) return
+                  copier.pending = page.online.link
+                  copier.stdinEnabled = true
                   copier.running = true
                   page.copied = true
                 }
@@ -317,6 +328,72 @@ FocusScope {
               font.pixelSize: page.theme.fontSmall
             }
           }
+        }
+
+        // ---------------------------------------------------- knock
+        // Someone used the link: the inviter checks who it is first.
+        SettingsCard {
+          visible: page.mode === "invite" && !!page.online && page.online.stage === "knock" && !!page.online.knock
+          width: parent.width
+          theme: page.theme
+          Column {
+            x: 10
+            width: parent.width - 20
+            topPadding: 10
+            bottomPadding: 10
+            spacing: page.theme.space
+            readonly property var k: page.online ? page.online.knock : null
+            Text {
+              textFormat: Text.PlainText
+              width: parent.width
+              wrapMode: Text.WordWrap
+              text: parent.k ? page.tr("online.knock.title", { name: parent.k.name || "?" }) : ""
+              color: page.theme.foreground
+              font.family: page.theme.fontFamily
+              font.pixelSize: page.theme.fontHeading
+              font.weight: Font.Bold
+            }
+            Text {
+              textFormat: Text.PlainText
+              visible: !!parent.k && parent.k.code !== ""
+              text: parent.k ? page.tr("online.code", { code: parent.k.code }) : ""
+              color: page.theme.accent
+              font.family: page.theme.fontFamily
+              font.pixelSize: page.theme.fontHeading
+              font.letterSpacing: 2
+            }
+            Text {
+              textFormat: Text.PlainText
+              width: parent.width
+              wrapMode: Text.WordWrap
+              text: parent.k ? page.tr("online.knock.help", { name: parent.k.name || "?" }) : ""
+              color: page.theme.muted
+              font.family: page.theme.fontFamily
+              font.pixelSize: page.theme.fontSmall
+            }
+            Row {
+              spacing: page.theme.space
+              GameButton { theme: page.theme; variant: "secondary"; text: page.tr("online.knock.reject"); onClicked: page.online.turnAway() }
+              GameButton { theme: page.theme; variant: "primary"; text: page.tr("online.knock.admit"); onClicked: page.online.admit() }
+            }
+          }
+        }
+
+        // After turning someone away: a fresh invitation.
+        Column {
+          visible: page.mode === "invite" && !!page.online && page.online.stage === "rejected"
+          width: parent.width
+          spacing: page.theme.space
+          Text {
+            textFormat: Text.PlainText
+            width: parent.width
+            wrapMode: Text.WordWrap
+            text: page.online ? page.tr("online.knock.rejected", { name: page.online.rejectedName || "?" }) : ""
+            color: page.theme.muted
+            font.family: page.theme.fontFamily
+            font.pixelSize: page.theme.fontBody
+          }
+          GameButton { theme: page.theme; variant: "primary"; text: page.tr("online.newInvite"); onClicked: { page.copied = false; page.online.invite(page.gameConfig || {}) } }
         }
 
         // ---------------------------------------------------- join
@@ -407,6 +484,18 @@ FocusScope {
           }
         }
 
+        // Joiner: the safety code the inviter will check, as large as on
+        // their screen.
+        Text {
+          textFormat: Text.PlainText
+          visible: page.mode === "join" && !!page.online && page.online.safetyCode !== "" && page.online.stage === "joining"
+          text: page.online ? page.tr("online.code", { code: page.online.safetyCode }) : ""
+          color: page.theme.accent
+          font.family: page.theme.fontFamily
+          font.pixelSize: page.theme.fontHeading
+          font.letterSpacing: 2
+        }
+
         // ---------------------------------------------------- progress
         Text {
           textFormat: Text.PlainText
@@ -414,9 +503,10 @@ FocusScope {
           wrapMode: Text.WordWrap
           readonly property string stage: page.online ? page.online.stage : ""
           visible: text !== ""
-          text: stage === "calling" ? ""
+          text: stage === "calling" || stage === "knock" || stage === "rejected" ? ""
             : stage === "inviting" ? page.tr("online.waiting")
-            : stage === "joining" ? page.tr("online.connecting")
+            : stage === "joining" ? page.tr("online.connecting") + (page.online.safetyCode ? "  " + page.tr("online.joining.code") : "")
+            : stage === "declined" && page.online.turnedAway ? page.tr("online.turnedAway")
             : stage === "dealing" ? (page.online.peerName ? page.tr("online.joined", { name: page.online.peerName }) + "  " : "") + page.tr("online.dealing")
             : stage === "declined" ? page.tr("online.declined")
             : stage === "failed" ? page.tr("online.failed") + " " + page.errorText()

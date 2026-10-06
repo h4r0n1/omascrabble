@@ -37,6 +37,10 @@ class ToxTest(unittest.TestCase):
         link = wait_for(self.procs, 0, "invite")["link"]
         self.assertTrue(link.startswith("omascrabble://tox/"))
         b.send({"cmd": "join", "link": link})
+        knock = wait_for(self.procs, 0, "knock", timeout=180)
+        joining = wait_for(self.procs, 1, "joining")
+        self.assertEqual(knock["code"], joining["code"], "both screens show the same safety code")
+        a.send({"cmd": "admit"})
         proposal = wait_for(self.procs, 1, "proposal", timeout=180)
         self.assertEqual(proposal["from"], "Ana")
         b.send({"cmd": "accept"})
@@ -75,6 +79,8 @@ class ToxTest(unittest.TestCase):
         a.send({"cmd": "invite", "config": {"gameLanguage": "fr", "dictionary": "open-fr"}})
         link = wait_for(self.procs, 0, "invite")["link"]
         b.send({"cmd": "join", "link": link})
+        wait_for(self.procs, 0, "knock", timeout=180)
+        a.send({"cmd": "admit"})
         wait_for(self.procs, 1, "proposal", timeout=180)
         b.send({"cmd": "accept"})
         wait_for(self.procs, 0, "started", timeout=180)

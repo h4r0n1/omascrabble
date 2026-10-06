@@ -63,9 +63,14 @@ class Pair:
 
 def start(pair):
     a, b = pair.sides[0], pair.sides[1]
-    game_id = a.new_invite({"lang": "fr", "time": 20}, "Ana", TILES)
+    game_id = a.new_invite({"gameLanguage": "fr", "timeMinutes": 20}, "Ana", TILES)
     b.new_join("Ben", TILES)
     pair.connect()
+    # Someone used the link: they knock, and only the inviter lets them in.
+    knock = pair.last(0, "knock")
+    assert knock and knock["name"] == "Ben", pair.events[0]
+    assert pair.last(1, "proposal") is None
+    pair.command(0, {"cmd": "admit"})
     proposal = pair.last(1, "proposal")
     assert proposal and proposal["gameId"] == game_id
     pair.command(1, {"cmd": "accept"})
@@ -175,8 +180,59 @@ class SessionTest(unittest.TestCase):
         p.sides[0].new_invite({}, "Ana", TILES)
         p.sides[1].new_join("Ben", TILES)
         p.connect()
+        p.command(0, {"cmd": "admit"})
         p.command(1, {"cmd": "decline"})
         self.assertIsNotNone(p.last(0, "declined"))
+
+    def test_turning_away_a_stranger(self):
+        p = self.pair
+        p.sides[0].new_invite({}, "Ana", TILES)
+        p.sides[1].new_join("Mallory", TILES)
+        p.connect()
+        self.assertEqual(p.last(0, "knock")["name"], "Mallory")
+        p.command(0, {"cmd": "turn-away"})
+        self.assertIsNotNone(p.last(1, "turned-away"))
+        self.assertIsNone(p.last(1, "proposal"), "a turned-away player never sees the game")
+        self.assertEqual(p.sides[0].stage, "turned-away")
+        # Admitting afterwards is refused.
+        p.command(0, {"cmd": "admit"})
+        self.assertIsNotNone(p.last(0, "error"))
+
+    def test_a_call_to_a_friend_needs_no_knock(self):
+        p = self.pair
+        p.sides[0].new_invite({"gameLanguage": "en"}, "Ana", TILES, trusted=True)
+        p.sides[1].new_join("Ben", TILES, auto_accept=True)
+        p.connect()
+        self.assertIsNone(p.last(0, "knock"))
+        self.assertIsNotNone(p.last(0, "started"))
+        self.assertIsNotNone(p.last(1, "started"))
+
+    def test_settings_from_the_other_side_are_cleaned(self):
+        c = S.clean_config({"gameLanguage": "en", "dictionary": "open-en", "timeMinutes": 25, "validation": "challenge",
+                            "challengePenalty": "points", "evil": "x" * 9999, "mode": "human_vs_ai"})
+        self.assertEqual(c, {"mode": "online", "gameLanguage": "en", "dictionary": "open-en", "timeMinutes": 25,
+                             "validation": "challenge", "challengePenalty": "points"})
+        self.assertEqual(S.clean_config({"dictionary": "../../etc", "timeMinutes": 999, "gameLanguage": "xx"}), {"mode": "online"})
+        self.assertEqual(S.clean_config("nonsense"), {"mode": "online"})
+
+    def test_names_from_the_other_side_are_cleaned(self):
+        self.assertEqual(S.clean_name("Ben\u202e\x07 "), "Ben")
+        self.assertEqual(len(S.clean_name("x" * 99)), 40)
+
+    def test_hostile_shapes_never_crash_the_session(self):
+        p = self.pair
+        start(p)
+        b = p.sides[1]
+        for bad in ({"t": "keys", "keys": [1, 2]}, {"t": "move", "action": {}, "keys": "x", "claims": {}, "index": 0},
+                    {"t": "move", "action": "x", "keys": {}, "claims": {}, "index": 0}, {"t": "audit", "keys": 5},
+                    {"t": "open", "nonce": None}, {"t": "deck1", "values": "zz"}, {"t": "rs3", "values": [[]]}):
+            bad["seq"] = b.s["inSeq"] + 1
+            before = len(p.events[1])
+            b.on_message(bad)  # must not raise
+            self.assertEqual(p.events[1][-1].get("ev") if len(p.events[1]) > before else "error", "error", bad["t"])
+        b.command({"cmd": "give", "handles": "nonsense"})
+        b.command({"cmd": "move"})
+        self.assertEqual(p.events[1][-1]["ev"], "error")
 
     def test_bad_messages_are_errors_not_crashes(self):
         p = self.pair

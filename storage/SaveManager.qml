@@ -225,7 +225,9 @@ Item {
 
   Process {
     id: mkdirProc
-    command: ["mkdir", "-p", "--", saves.stateDir + "/archive"]
+    // The folder is private (0700): saves hold an online game's rack, and
+    // nothing in it is for other users of the machine.
+    command: ["sh", "-c", 'mkdir -p -- "$1/archive" && chmod 700 -- "$1"', "mkstate", saves.stateDir]
     onExited: function(code) {
       if (code !== 0) console.warn("omascrabble: cannot create " + saves.stateDir)
       saves.directoryReady = true

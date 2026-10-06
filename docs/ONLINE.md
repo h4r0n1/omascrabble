@@ -91,19 +91,35 @@ can change its value after seeing the other's.
 ## Messages between the two helpers
 
 `hello` (protocol version, name, how far this side got — the other resends
-the rest of its log), then numbered: `propose` / `accept` / `decline`,
+the rest of its log), then numbered: `turned-away` (see below),
+`propose` / `accept` / `decline`,
 `commit` / `open` (seed), `deck1`..`deck4` (setup), `keys` (private keys for
 drawn handles), `move` (action, keys and claims for the tiles played,
 fingerprint, move index), `rs1`..`rs4` (reshuffle), `audit` (all keys),
 `bye`. Big numbers travel as hex strings. Every incoming message is checked
 (size, shape, order) and treated as untrusted data.
 
+## Who may join
+
+The invitation link carries a one-time secret (Tox: the inviter's address
+plus the secret, valid 24 hours). The secret only lets someone **knock**:
+the inviter's game shows their name and an eight-digit **safety code**
+derived from both Tox public keys (the same on both screens, different for
+anyone else), and the inviter admits them (`admit` → `propose`) or turns
+them away (`turn-away` → `turned-away`; their Tox friendship is removed).
+Nobody is saved as a friend before a game has started. A call to a friend
+from the friends list is bound to that friend's public key and needs no
+knock. The link never appears in a process's arguments (it's copied through
+`wl-copy`'s standard input), and direct `tcp` links are refused outside test
+mode. Unused invitations older than 24 hours are deleted when the helper
+starts.
+
 ## Game ↔ helper
 
-Commands: `hello`, `invite {config}`, `join {link}`, `accept`, `decline`,
+Commands: `hello`, `invite {config}`, `join {link}`, `admit`, `turn-away`, `accept`, `decline`,
 `cancel`, `resume {gameId, moves}`, `give {handles}`, `open {handles}`,
 `move {action, reveal, fp, index}`, `reshuffle {handles}`, `audit {inPlay}`.
-Events: `ready {transport}`, `invite {link}`, `peer`, `proposal`, `accepted`,
+Events: `ready {transport}`, `invite {link}`, `joining {code}`, `knock {name, code}`, `rejected`, `turned-away`, `peer`, `proposal`, `accepted`,
 `declined`, `started {seat, seed, first, …}`, `revealed {tiles}`,
 `action {action, tiles, fp, index}`, `rebag {from, handles}`,
 `audited {tiles}`, `link {state}`, `cheat`, `error {code}`.

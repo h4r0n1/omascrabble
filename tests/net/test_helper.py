@@ -80,6 +80,9 @@ class HelperTest(unittest.TestCase):
         invite = wait_for(self.procs, 0, "invite")
         self.assertTrue(invite["link"].startswith("omascrabble://tcp/127.0.0.1:"))
         b.send({"cmd": "join", "link": invite["link"], "tiles": 102})
+        knock = wait_for(self.procs, 0, "knock")
+        self.assertEqual(knock["name"], "Ben")
+        a.send({"cmd": "admit"})
         proposal = wait_for(self.procs, 1, "proposal")
         self.assertEqual(proposal["from"], "Ana")
         b.send({"cmd": "accept"})
@@ -126,6 +129,67 @@ class HelperTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class LinkTest(unittest.TestCase):
+    def test_direct_links_only_in_test_mode(self):
+        sys.path.insert(0, os.path.dirname(HELPER))
+        sys.dont_write_bytecode = True
+        import online
+        old = os.environ.get("OMASCRABBLE_TRANSPORT")
+        try:
+            os.environ.pop("OMASCRABBLE_TRANSPORT", None)
+            with self.assertRaises(ValueError):
+                online.parse_link("omascrabble://tcp/203.0.113.9:4444/abcdef")
+            tox = "omascrabble://tox/" + "A" * 76 + "/abcdef"
+            self.assertEqual(online.parse_link(tox)["kind"], "tox")
+            os.environ["OMASCRABBLE_TRANSPORT"] = "tcp"
+            self.assertEqual(online.parse_link("omascrabble://tcp/127.0.0.1:4444/abcdef")["port"], 4444)
+        finally:
+            if old is None:
+                os.environ.pop("OMASCRABBLE_TRANSPORT", None)
+            else:
+                os.environ["OMASCRABBLE_TRANSPORT"] = old
+
+    def test_invitations_are_bound_and_expire(self):
+        sys.path.insert(0, os.path.dirname(HELPER))
+        sys.dont_write_bytecode = True
+        import tox_transport as T
+        ana, ben, eve = "A" * 64, "B" * 64, "E" * 64
+        self.assertEqual(T.safety_code(ana, ben), T.safety_code(ben, ana), "same code on both screens")
+        self.assertNotEqual(T.safety_code(ana, ben), T.safety_code(ana, eve), "a stranger shows another code")
+        self.assertRegex(T.safety_code(ana, ben), r"^\d{4} \d{4}$")
+        call = {"secret": "s", "expect": ben, "expires": 2000}
+        self.assertTrue(T.invite_accepts(call, ben, now=1000))
+        self.assertFalse(T.invite_accepts(call, eve, now=1000), "a call only works for its friend")
+        self.assertFalse(T.invite_accepts(call, ben, now=3000), "links expire")
+        self.assertTrue(T.invite_accepts({"secret": "s"}, eve, now=1000))
+
+
+class StaleInvitationTest(unittest.TestCase):
+    def test_old_unfinished_invitations_are_removed(self):
+        root = tempfile.mkdtemp()
+        try:
+            online = os.path.join(root, "omascrabble", "online")
+            os.makedirs(online)
+            old_invite = os.path.join(online, "1111111111111111.json")
+            old_game = os.path.join(online, "2222222222222222.json")
+            new_invite = os.path.join(online, "3333333333333333.json")
+            for path, stage in ((old_invite, "inviting"), (old_game, "playing"), (new_invite, "inviting")):
+                with open(path, "w") as f:
+                    json.dump({"stage": stage, "link": {"secret": "abc"}}, f)
+            two_days = time.time() - 2 * 24 * 3600
+            os.utime(old_invite, (two_days, two_days))
+            os.utime(old_game, (two_days, two_days))
+            p = Proc(root)
+            p.send({"cmd": "hello", "name": "Me"})
+            wait_for([p], 0, "ready")
+            p.close()
+            self.assertFalse(os.path.exists(old_invite), "an old unused invitation is removed")
+            self.assertTrue(os.path.exists(old_game), "a game is kept")
+            self.assertTrue(os.path.exists(new_invite), "a recent invitation is kept")
+        finally:
+            shutil.rmtree(root)
 
 
 class FriendsFromGamesTest(unittest.TestCase):

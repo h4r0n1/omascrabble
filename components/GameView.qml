@@ -151,7 +151,7 @@ FocusScope {
       view.openOnline("join")
     }
     onCancelled: view.online.answer(false)
-    onCallChanged: if (call && view.controller && !view.controller.windowActive) view.controller.notify(tr("online.notify.title"), tr("online.call.notify", { name: call.name }))
+    onCallChanged: if (call && view.controller && !view.controller.windowActive) view.controller.notify(tr("online.notify.title"), tr("online.call.notify"))
   }
 
   function openOnline(mode) {

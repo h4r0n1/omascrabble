@@ -39,6 +39,27 @@ def clean_name(value):
     return _UNSAFE.sub("", str(value)).strip()[:40]
 
 
+_DICTIONARY_ID = re.compile(r"^[a-z0-9-]{1,32}$")
+
+
+def clean_config(config):
+    """Game settings from the other machine (or a friend's call): only the
+    known keys, each with an allowed value."""
+    c = config if isinstance(config, dict) else {}
+    out = {"mode": "online"}
+    if c.get("gameLanguage") in ("fr", "en"):
+        out["gameLanguage"] = c["gameLanguage"]
+    if isinstance(c.get("dictionary"), str) and _DICTIONARY_ID.match(c["dictionary"]):
+        out["dictionary"] = c["dictionary"]
+    if c.get("timeMinutes") in (0, 10, 20, 25, 30):
+        out["timeMinutes"] = c["timeMinutes"]
+    if c.get("validation") in ("immediate", "challenge"):
+        out["validation"] = c["validation"]
+    if c.get("challengePenalty") in ("none", "points", "lose_turn"):
+        out["challengePenalty"] = c["challengePenalty"]
+    return out
+
+
 class Session:
     def __init__(self, path, send, emit):
         self.path = path
@@ -49,10 +70,15 @@ class Session:
         self.deck = None
 
     # ------------------------------------------------------------ lifecycle
-    def new_invite(self, config, name, tiles):
+    def new_invite(self, config, name, tiles, trusted=False):
+        """`trusted`: a call to a known friend, who doesn't need letting in.
+        Anyone else arriving with the invitation secret knocks first: the
+        inviter sees their name and safety code and admits or turns them
+        away (a leaked link alone never lets anyone in)."""
         self.s = self._blank("inviter", 0, name, tiles)
         self.s["id"] = secrets.token_hex(8)
-        self.s["config"] = config
+        self.s["config"] = clean_config(config)
+        self.s["trusted"] = bool(trusted)
         self.s["stage"] = "inviting"
         self.s["now"] = int(time.time() * 1000)
         self._save()
@@ -136,7 +162,7 @@ class Session:
             self.s["stage"] = "invalid"
             self._save()
             self._emit({"ev": "cheat", "message": str(e)})
-        except (ProtocolError, KeyError, TypeError, ValueError) as e:
+        except Exception as e:  # malformed or hostile input must never stop the helper
             self._emit({"ev": "error", "code": "protocol", "message": str(e)})
 
     # ------------------------------------------------------------ game side
@@ -152,7 +178,7 @@ class Session:
             self.s["stage"] = "invalid"
             self._save()
             self._emit({"ev": "cheat", "message": str(e)})
-        except (ProtocolError, KeyError, TypeError, ValueError) as e:
+        except Exception as e:  # malformed or hostile input must never stop the helper
             self._emit({"ev": "error", "code": "command", "message": str(e)})
 
     # ------------------------------------------------------------ handshake
@@ -171,18 +197,48 @@ class Session:
         for m in self.s["outLog"]:
             if m["seq"] > msg["have"]:
                 self._send_raw(m)
+        knock = False
         if self.s["role"] == "inviter" and self.s["stage"] == "inviting":
-            self.s["stage"] = "proposed"
-            self._send({"t": "propose", "game": self.s["id"], "config": self.s["config"], "now": self.s["now"],
-                        "name": self.s["name"], "tiles": self.s["tiles"]})
+            if self.s.get("trusted"):
+                self._propose()
+            else:
+                self.s["stage"] = "knocking"
+                knock = True
+        elif self.s["role"] == "inviter" and self.s["stage"] == "knocking":
+            knock = True  # reconnected while waiting to be let in
         self._emit({"ev": "peer", "name": self.s["peerName"], "gameId": self.s.get("id")})
+        if knock:
+            self._emit({"ev": "knock", "name": self.s["peerName"], "gameId": self.s.get("id")})
         self._save()
+
+    def _propose(self):
+        self.s["stage"] = "proposed"
+        self._send({"t": "propose", "game": self.s["id"], "config": self.s["config"], "now": self.s["now"],
+                    "name": self.s["name"], "tiles": self.s["tiles"]})
+
+    def _cmd_admit(self, cmd):
+        if self.s["role"] != "inviter" or self.s["stage"] != "knocking":
+            raise ProtocolError("nobody is waiting to be let in")
+        self._propose()
+
+    def _cmd_turn_away(self, cmd):
+        if self.s["role"] != "inviter" or self.s["stage"] != "knocking":
+            raise ProtocolError("nobody is waiting to be let in")
+        self.s["stage"] = "turned-away"
+        self._send({"t": "turned-away"})
+
+    def _on_turned_away(self, msg):
+        if self.s["role"] != "joiner":
+            raise ProtocolError("unexpected message")
+        self.s["stage"] = "declined"
+        self._emit({"ev": "turned-away"})
 
     def _on_propose(self, msg):
         if self.s["role"] != "joiner":
             raise ProtocolError("unexpected proposal")
         if not isinstance(msg.get("config"), dict):
             raise ProtocolError("bad proposal")
+        msg["config"] = clean_config(msg["config"])
         tiles = int(msg.get("tiles", 0))
         if not 2 <= tiles <= 200:
             raise ProtocolError("bad tile count")
@@ -302,6 +358,7 @@ class Session:
         self._resolve_opens()
 
     def _on_keys(self, msg):
+        _require_dict(msg.get("keys"), "keys")
         for h, k in msg["keys"].items():
             self.s["buffer"][str(int(h))] = k
         self._resolve_opens()
@@ -337,6 +394,10 @@ class Session:
                     "fp": cmd.get("fp"), "index": int(cmd["index"])})
 
     def _on_move(self, msg):
+        _require_dict(msg.get("keys"), "move keys")
+        _require_dict(msg.get("claims"), "move claims")
+        if not isinstance(msg.get("action"), dict):
+            raise ProtocolError("bad move")
         tiles = {}
         for h, k in msg["keys"].items():
             handle = int(h)
@@ -418,6 +479,9 @@ class Session:
         self._maybe_audit()
 
     def _on_audit(self, msg):
+        _require_dict(msg.get("keys"), "audit keys")
+        if len(msg["keys"]) > 5000:
+            raise ProtocolError("too many keys")
         self.s["peerKeys"] = msg["keys"]
         self._maybe_audit()
 
@@ -492,6 +556,11 @@ class Session:
             except OSError:
                 pass
             raise
+
+
+def _require_dict(value, what):
+    if not isinstance(value, dict) or len(value) > 5000:
+        raise ProtocolError("bad %s" % what)
 
 
 def _hex(values):
