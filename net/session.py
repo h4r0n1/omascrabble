@@ -29,6 +29,9 @@ from deck import Deck, CheatDetected, ProtocolError, commitment
 
 PROTOCOL = 1
 MAX_LOG = 5000
+MAX_MOVES = 1000          # far more than any game has
+MAX_REVEAL = 7            # a move shows at most the tiles it plays
+MAX_ACTION = 8192         # bytes of JSON for one move
 
 # Which side may receive each message, and in which stages. Anything else is
 # refused before it can change the session: in particular nothing beyond the
@@ -52,7 +55,7 @@ MESSAGES = {
     "rs3": (("joiner",), ("playing",)),
     "rs4": (("inviter",), ("playing",)),
     "audit": (ANY, ("playing", "ended")),
-    "bye": (ANY, None),
+    "bye": (ANY, ("proposed", "seeding", "dealing", "playing", "ended")),
 }
 COMMANDS = {
     "admit": ("knocking",), "turn-away": ("knocking",),
@@ -71,6 +74,28 @@ def clean_name(value):
 
 
 _DICTIONARY_ID = re.compile(r"^[a-z0-9-]{1,32}$")
+
+
+def normalise(s):
+    """A saved session, made consistent with this version's rules. `seed` is
+    only ever set once both players agreed (in every version: it needs both
+    sides' commit-reveal, which starts at "accept"), so an older game with a
+    seed was agreed to; one marked as playing without a seed never was."""
+    if not isinstance(s, dict):
+        return s
+    if s.get("seed") is not None and "admitted" not in s:
+        s["admitted"] = True
+    if "started" not in s:
+        if s.get("stage") in ("playing", "ended") and s.get("seed") is not None:
+            s["started"] = True
+        elif s.get("stage") in ("dealing", "playing", "ended") and s.get("seed") is None:
+            s["stage"] = "invalid"
+    return s
+
+
+def began(s):
+    """Did this saved session become a real game (both players agreed)?"""
+    return isinstance(s, dict) and normalise(s).get("started") is True
 
 
 def clean_config(config):
@@ -99,6 +124,7 @@ class Session:
         self.connected = False
         self.s = None               # the persisted state (a plain dict)
         self.deck = None
+        self._knocked = False       # knock already shown for this connection
 
     # ------------------------------------------------------------ lifecycle
     def new_invite(self, config, name, tiles, trusted=False):
@@ -142,7 +168,7 @@ class Session:
     def load(cls, path, send, emit):
         session = cls(path, send, emit)
         with open(path, encoding="utf-8") as f:
-            session.s = json.load(f)
+            session.s = normalise(json.load(f))
         if session.s.get("deck"):
             session.deck = Deck.from_json(session.s["deck"])
         return session
@@ -163,6 +189,7 @@ class Session:
 
     def on_disconnected(self):
         self.connected = False
+        self._knocked = False
         self._emit({"ev": "link", "state": "disconnected"})
 
     def _snapshot(self):
@@ -241,7 +268,9 @@ class Session:
             return
         if not isinstance(msg.get("name"), str) or not isinstance(msg.get("have"), int):
             raise ProtocolError("bad hello")
-        self.s["peerName"] = clean_name(msg["name"])
+        # The name is the one first shown (and let in): it can't change later.
+        if not self.s.get("peerName"):
+            self.s["peerName"] = clean_name(msg["name"])
         if self.s["role"] == "joiner" and self.s.get("id") is None and isinstance(msg.get("session"), str):
             self._adopt_id(msg["session"])
         elif msg.get("session") not in (None, self.s.get("id")):
@@ -259,6 +288,9 @@ class Session:
                 knock = True
         elif self.s["role"] == "inviter" and self.s["stage"] == "knocking":
             knock = True  # reconnected while waiting to be let in
+        if knock and self._knocked:
+            return  # shown once per connection: a repeated hello is no new knock
+        self._knocked = self._knocked or knock
         self._emit({"ev": "peer", "name": self.s["peerName"], "gameId": self.s.get("id")})
         if knock:
             self._emit({"ev": "knock", "name": self.s["peerName"], "gameId": self.s.get("id")})
@@ -298,9 +330,12 @@ class Session:
         tiles = int(msg.get("tiles", 0))
         if not 2 <= tiles <= 200:
             raise ProtocolError("bad tile count")
+        now = int(msg["now"])
+        if not 0 <= now < 10 ** 13:
+            raise ProtocolError("bad start time")
         self.s["config"] = msg["config"]
         self.s["tiles"] = tiles
-        self.s["now"] = int(msg["now"])
+        self.s["now"] = now
         self.s["stage"] = "proposed"
         self._emit({"ev": "proposal", "config": msg["config"], "from": self.s.get("peerName", ""), "gameId": self.s["id"],
                     "autoAccept": bool(self.s.get("autoAccept"))})
@@ -460,17 +495,26 @@ class Session:
     def _on_move(self, msg):
         _require_dict(msg.get("keys"), "move keys")
         _require_dict(msg.get("claims"), "move claims")
-        if not isinstance(msg.get("action"), dict):
+        if not isinstance(msg.get("action"), dict) or len(json.dumps(msg["action"])) > MAX_ACTION:
             raise ProtocolError("bad move")
+        if len(msg["keys"]) > MAX_REVEAL or set(msg["keys"]) != set(msg["claims"]):
+            raise ProtocolError("bad move reveal")
+        if not (msg.get("fp") is None or (isinstance(msg["fp"], str) and len(msg["fp"]) <= 64)):
+            raise ProtocolError("bad move fingerprint")
+        index = msg.get("index")
+        if not isinstance(index, int) or not 0 <= index <= MAX_MOVES:
+            raise ProtocolError("bad move index")
         tiles = {}
         for h, k in msg["keys"].items():
             handle = int(h)
             claimed = int(msg["claims"][h])
+            if not isinstance(k, str) or len(k) > 512:
+                raise ProtocolError("bad key")
             tiles[str(handle)] = self.deck.check_reveal(handle, int(k, 16), claimed)
             self.s["claims"][str(handle)] = claimed
-        event = {"ev": "action", "action": msg["action"], "tiles": tiles, "fp": msg.get("fp"), "index": int(msg["index"])}
+        event = {"ev": "action", "action": msg["action"], "tiles": tiles, "fp": msg.get("fp"), "index": index}
         self.s["inbound"].append(event)
-        if len(self.s["inbound"]) > MAX_LOG:
+        if len(self.s["inbound"]) > MAX_MOVES:
             raise ProtocolError("game too long")
         self._emit(event)
 
@@ -501,7 +545,9 @@ class Session:
 
     def _on_rs1(self, msg):
         self._require_seat(1)
-        self.s["rs1"] = msg
+        handles = _handle_list(msg.get("handles"))
+        _ints(msg.get("values"))  # checked now; kept as received for the next step
+        self.s["rs1"] = {"handles": handles, "values": msg["values"]}
         self._maybe_rs2()
 
     def _maybe_rs2(self):
@@ -634,6 +680,8 @@ def _hex(values):
 def _ints(values):
     if not isinstance(values, list) or len(values) > 400:
         raise ProtocolError("bad value list")
+    if not all(isinstance(v, str) and 0 < len(v) <= 512 for v in values):
+        raise ProtocolError("bad value")
     return [int(v, 16) for v in values]
 
 

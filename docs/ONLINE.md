@@ -120,6 +120,20 @@ knock. The link never appears in a process's arguments (it's copied through
 mode. Unused invitations older than 24 hours are deleted when the helper
 starts.
 
+## What the other machine can and can't do
+
+Everything it sends is untrusted. Messages are capped in size (3 MB for one
+message; a move's action 8 KB, at most 7 revealed tiles, at most 1000 moves
+kept), every big number is checked to be a valid encrypted tile or key, and a
+move may only be made for the sender's own player (`remoteActionProblem` in
+`engine/game.mjs`). Its name is fixed once shown, a knock is shown once per
+connection, and nothing it sends reaches a shell, a file path, a
+notification or rich text.
+
+**Privacy.** Tox is peer to peer: the other player (and any relay node used)
+can see your IP address. Local network discovery is on while online play is
+open.
+
 ## Game ↔ helper
 
 Commands: `hello`, `invite {config}`, `join {link}`, `admit`, `turn-away`, `accept`, `decline`,

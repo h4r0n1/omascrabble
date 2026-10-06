@@ -33,7 +33,7 @@ import time  # noqa: E402
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
-from session import Session, clean_name, clean_config  # noqa: E402
+from session import Session, began, clean_name, clean_config  # noqa: E402
 
 INVITE_LIFETIME = 24 * 3600
 
@@ -328,7 +328,7 @@ class Helper:
             link = s.get("link") if isinstance(s, dict) else None
             key = link.get("peer") if isinstance(link, dict) and link.get("kind") == "tox" else None
             # Only a game that really started (the inviter let them in) counts.
-            if not key or len(key) != 64 or s.get("started") is not True:
+            if not key or len(key) != 64 or not began(s):
                 continue
             last = int(os.path.getmtime(os.path.join(self.dir, name)))
             if key not in friends or friends[key]["last"] < last:
@@ -391,8 +391,7 @@ class Helper:
         return self.tox
 
     def _game_peers(self):
-        """Tox keys of the players of saved games that really began (or of
-        games saved by versions before the knock existed)."""
+        """Tox keys of the players of saved games that really began."""
         peers = set()
         for name in os.listdir(self.dir):
             if not name.endswith(".json") or name in ("friends.json", "nodes.json"):
@@ -402,12 +401,10 @@ class Helper:
                     s = json.load(f)
             except (OSError, ValueError):
                 continue
-            if not isinstance(s, dict):
+            if not began(s):
                 continue
             link = s.get("link") if isinstance(s.get("link"), dict) else {}
-            began = s.get("started") is True or (
-                "trusted" not in s and "autoAccept" not in s and s.get("stage") in ("playing", "ended") and s.get("seed") is not None)
-            if began and link.get("kind") == "tox" and isinstance(link.get("peer"), str):
+            if link.get("kind") == "tox" and isinstance(link.get("peer"), str):
                 peers.add(link["peer"].upper())
         return peers
 

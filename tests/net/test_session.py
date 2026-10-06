@@ -277,6 +277,78 @@ class SessionTest(unittest.TestCase):
         self.assertEqual(after["claims"], before["claims"])
         self.assertEqual(after["inbound"], before["inbound"])
 
+    def test_a_knocking_peer_cant_rename_spam_or_leave_messages(self):
+        p = self.pair
+        a, b = p.sides[0], p.sides[1]
+        a.new_invite({"gameLanguage": "fr"}, "Ana", TILES)
+        b.new_join("Ben", TILES)
+        p.connect()
+        knocks = [e for e in p.events[0] if e.get("ev") == "knock"]
+        self.assertEqual(len(knocks), 1)
+        # Repeated hellos on the same connection: no new knock, no new name.
+        for _ in range(3):
+            a.on_message({"t": "hello", "v": S.PROTOCOL, "session": a.s["id"], "name": "Alice", "have": 0})
+        self.assertEqual(len([e for e in p.events[0] if e.get("ev") == "knock"]), 1)
+        self.assertEqual(a.s["peerName"], "Ben")
+        # A "bye" before being let in is refused.
+        a.on_message({"t": "bye", "seq": a.s["inSeq"] + 1})
+        self.assertIsNone(p.last(0, "bye"))
+        self.assertEqual(a.stage, "knocking")
+        # After a real reconnection the knock is shown again (same name).
+        p.cut()
+        p.connect()
+        knocks = [e for e in p.events[0] if e.get("ev") == "knock"]
+        self.assertEqual([k["name"] for k in knocks], ["Ben", "Ben"])
+
+    def test_moves_are_bounded(self):
+        p = self.pair
+        start(p)
+        b = p.sides[1]
+        base = {"t": "move", "action": {"type": "pass", "player": 0}, "keys": {}, "claims": {}, "fp": None, "index": 0}
+        bad = [
+            dict(base, action={"type": "pass", "player": 0, "junk": "x" * 10000}),
+            dict(base, keys={str(i): "2" for i in range(8)}, claims={str(i): 1 for i in range(8)}),
+            dict(base, keys={"0": "2"}, claims={}),
+            dict(base, index=-1), dict(base, index="0"), dict(base, index=10 ** 9),
+            dict(base, fp={"x": 1}), dict(base, fp="f" * 100),
+            dict(base, keys={"0": "f" * 5000}, claims={"0": 1}),
+        ]
+        for msg in bad:
+            inbound = len(b.s["inbound"])
+            b.on_message(dict(msg, seq=b.s["inSeq"] + 1))
+            self.assertEqual(p.last(1, "error")["code"], "protocol", msg)
+            self.assertEqual(len(b.s["inbound"]), inbound)
+        b.on_message(dict(base, seq=b.s["inSeq"] + 1))
+        self.assertEqual(p.last(1, "action")["index"], 0)
+
+    def test_older_saves_are_brought_up_to_date(self):
+        # A game in progress saved by 0.3.1 (agreed: it has a seed) resumes...
+        self.assertTrue(S.began({"stage": "playing", "seed": 7, "trusted": False}))
+        self.assertTrue(S.normalise({"stage": "dealing", "seed": 7})["admitted"])
+        # ...what the reported bypass could leave behind (no seed) never counts.
+        bypass = {"stage": "playing", "seed": None, "trusted": False}
+        self.assertFalse(S.began(bypass))
+        self.assertEqual(bypass["stage"], "invalid")
+        self.assertFalse(S.began({"stage": "knocking"}))
+        self.assertFalse(S.began(["not", "a", "session"]))
+        # Saved by this version: only `started` counts.
+        self.assertFalse(S.began({"stage": "playing", "seed": 7, "started": False}))
+
+    def test_a_resumed_older_game_restarts_cleanly(self):
+        import json
+        p = self.pair
+        start(p)
+        a = p.sides[0]
+        legacy = json.load(open(a.path))
+        for k in ("started", "admitted"):
+            legacy.pop(k)
+        with open(a.path, "w") as f:
+            json.dump(legacy, f)
+        events = []
+        resumed = S.Session.load(a.path, lambda m: None, events.append)
+        resumed.command({"cmd": "resync", "moves": 0})
+        self.assertEqual([e["ev"] for e in events], ["started"])
+
     def test_hostile_shapes_never_crash_the_session(self):
         p = self.pair
         start(p)

@@ -295,6 +295,15 @@ function racksHidden(state) {
   return state.players.some(function(p) { return p.rack.some(function(id) { return state.tiles[id].hidden }) })
 }
 
+// Online: what's wrong with a move received from the other machine, before it
+// is applied (null if nothing). It may only ever move for its own player.
+export function remoteActionProblem(action, localPlayer) {
+  if (!action || typeof action !== "object" || typeof action.type !== "string" || !Number.isInteger(action.player))
+    return "malformed move"
+  if (action.player === localPlayer) return "move for the wrong player"
+  return null
+}
+
 // A short digest of everything both machines must agree on after a move.
 // Timestamps and letters a player may not know are left out.
 export function fingerprint(state) {

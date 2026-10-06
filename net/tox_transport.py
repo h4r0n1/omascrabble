@@ -37,7 +37,7 @@ CHUNK = MAX_PACKET - 1
 MORE, LAST = 160, 161
 SAVEDATA_TYPE_TOX_SAVE = 1
 CONNECTION_NONE = 0
-MAX_MESSAGE = 4 * 1024 * 1024
+MAX_MESSAGE = 3 * 1024 * 1024   # the largest message, the end-of-game audit, is at most 5000 keys of ~400 bytes
 # Messages between friends outside any game (see net/online.py).
 LOBBY = ("call", "call-decline", "call-cancel")
 

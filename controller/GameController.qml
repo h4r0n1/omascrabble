@@ -662,14 +662,8 @@ QtObject {
 
   function onRemoteAction(ev) {
     var a = ev.action
-    if (!a || typeof a !== "object" || typeof a.type !== "string" || !Number.isInteger(a.player)) {
-      onlineProblem = { kind: "desync", message: "malformed move" }
-      return
-    }
-    if (a.player === viewer) {                          // the other machine may only move for its own player
-      onlineProblem = { kind: "desync", message: "move for the wrong player" }
-      return
-    }
+    var problem = Engine.remoteActionProblem(a, viewer)
+    if (problem) { onlineProblem = { kind: "desync", message: problem }; return }
     if (ev.index < game.moves.length) return           // already applied (replayed after a restart)
     if (ev.index > game.moves.length) { onlineProblem = { kind: "desync", message: "missing moves" }; return }
     game = Engine.revealTiles(game, ev.tiles || {})

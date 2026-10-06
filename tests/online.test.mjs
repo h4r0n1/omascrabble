@@ -4,7 +4,8 @@
 // copies must agree (fingerprint) and neither may know the other's rack.
 
 import {
-  createGame, applyAction, publicView, revealTiles, replaceBag, completeEnd, fingerprint, tilesInPlay, unseenCounts, MODE
+  createGame, applyAction, publicView, revealTiles, replaceBag, completeEnd, fingerprint, tilesInPlay, unseenCounts, MODE,
+  remoteActionProblem
 } from "../engine/game.mjs"
 import { serializeGame, deserializeGame } from "../engine/serializer.mjs"
 import { createTiles, getTileset } from "../engine/tileset.mjs"
@@ -192,5 +193,14 @@ export function register(t) {
       t.equal(fingerprint(pair.copies[0]), fingerprint(pair.copies[1]))
       t.equal(tilesInPlay(pair.copies[0]).length, 102)
     }
+  })
+
+  t.test("the other machine can only move for its own player", function() {
+    // Seat 0 is this machine: a resign (allowed out of turn) sent for it is refused.
+    t.equal(remoteActionProblem({ type: "resign", player: 0 }, 0), "move for the wrong player")
+    t.equal(remoteActionProblem({ type: "pass", player: 1 }, 0), null)
+    t.equal(remoteActionProblem({ type: "pass", player: "1" }, 0), "malformed move")
+    t.equal(remoteActionProblem(null, 0), "malformed move")
+    t.equal(remoteActionProblem({ player: 1 }, 0), "malformed move")
   })
 }

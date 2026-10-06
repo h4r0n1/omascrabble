@@ -248,6 +248,10 @@ this command. Python 3 (standard library) is also used, as for definitions.
   other and can relay encrypted packets; they can't read them. Your Tox
   identity is created on first use and stays in
   `~/.local/state/omascrabble/online` (readable by you only).
+- *Privacy:* like any peer-to-peer connection, the person you play with (and
+  the relay nodes used, if any) can see your IP address. Only let in people
+  you'd share it with; the game also joins your local network's Tox discovery
+  while online play is open.
 - *No referee:* both machines run the whole game with the same engine and
   check every move; after each move they compare a fingerprint of the game,
   and a mismatch stops the game rather than letting the copies drift.
