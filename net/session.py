@@ -420,7 +420,11 @@ class Session:
     def _on_keys(self, msg):
         _require_dict(msg.get("keys"), "keys")
         for h, k in msg["keys"].items():
+            if not isinstance(k, str) or len(k) > 512 or not 0 <= int(h) < 100000:
+                raise ProtocolError("bad key")
             self.s["buffer"][str(int(h))] = k
+        if len(self.s["buffer"]) > 1000:
+            raise ProtocolError("too many keys")
         self._resolve_opens()
 
     def _resolve_opens(self):
