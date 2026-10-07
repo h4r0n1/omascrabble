@@ -466,6 +466,12 @@ class ToxPeer:
             self.node.invites[self.link["secret"]] = self
         elif self.link["role"] == "joiner" and not self.link.get("peer"):
             address = self.link["address"]
+            # A contact left from an earlier game may be gone on the
+            # inviter's side (removed from their friends, turned away, cleaned
+            # up): reusing it would never connect. Start over with a request
+            # carrying this invitation; if they still have us, it's ignored and
+            # the old contact simply reconnects (the secret then goes in-band).
+            self.node.forget(address[:PUBLIC_KEY_SIZE * 2])
             self.friend = self.node.add_friend(address, "%s omascrabble" % self.link["secret"])
             self.bind(address[:PUBLIC_KEY_SIZE * 2])
         else:

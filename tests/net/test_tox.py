@@ -108,6 +108,32 @@ class ToxTest(unittest.TestCase):
         b.send({"cmd": "answer", "friend": call["friend"], "accept": False})
         wait_for(self.procs, 0, "declined", timeout=120, after=mark_a)
 
+    def test_a_link_works_whatever_the_inviter_kept(self):
+        """A friend removed on one side only (or a stranger turned away and
+        later invited properly) can still join by link; so can a friend both
+        sides still have."""
+        a, b = self.procs
+        a.send({"cmd": "hello", "name": "Ana"})
+        b.send({"cmd": "hello", "name": "Ben"})
+        wait_for(self.procs, 0, "ready")
+
+        def play_by_link():
+            mark_a, mark_b = len(a.events), len(b.events)
+            a.send({"cmd": "invite", "config": {"gameLanguage": "fr"}})
+            link = wait_for(self.procs, 0, "invite", after=mark_a)["link"]
+            b.send({"cmd": "join", "link": link})
+            wait_for(self.procs, 0, "knock", timeout=180, after=mark_a)
+            a.send({"cmd": "admit"})
+            wait_for(self.procs, 1, "proposal", timeout=180, after=mark_b)
+            b.send({"cmd": "accept"})
+            wait_for(self.procs, 0, "started", timeout=180, after=mark_a)
+            return [e for e in a.events if e.get("ev") == "friends" and e["list"]][-1]["list"][0]["id"]
+
+        ben = play_by_link()                     # strangers
+        play_by_link()                           # friends on both sides
+        a.send({"cmd": "cancel"})                # out of the game, then
+        a.send({"cmd": "forget", "friend": ben})  # Ana removes Ben; Ben still has Ana
+        play_by_link()
 
 if __name__ == "__main__":
     unittest.main()
