@@ -22,7 +22,7 @@ Item {
   readonly property string selfId: "omascrabble"
   // Must match manifest.json "version"; a mismatch means the files on disk
   // were updated while this (keep-loaded) code kept running.
-  readonly property string codeVersion: "0.3.3"
+  readonly property string codeVersion: "0.3.4"
   readonly property string pluginDir: {
     var url = Qt.resolvedUrl(".").toString()
     return decodeURIComponent(url.replace(/^file:\/\//, "")).replace(/\/$/, "")

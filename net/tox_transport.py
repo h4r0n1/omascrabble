@@ -316,7 +316,16 @@ class ToxNode:
                 if secrets.compare_digest(s, secret) and invite_accepts(p.link, key):
                     peer = p
             if peer is None:
-                return  # not one of our invitations (or expired, or meant for someone else): ignore
+                # Not one of our invitations (ended, expired, or meant for
+                # someone else): ignored. toxcore remembers every request it
+                # passed on and silently drops any later one from the same
+                # key, which would block this person's next, valid invitation
+                # until a restart; adding and deleting the contact is how its
+                # API clears that memory.
+                n = self.lib.tox_friend_add_norequest(self.tox, _buf(bytes.fromhex(key)), None)
+                if n != 0xFFFFFFFF:
+                    self.lib.tox_friend_delete(self.tox, n, None)
+                return
             del self.invites[peer.link["secret"]]
             friend = self.lib.tox_friend_add_norequest(self.tox, _buf(bytes.fromhex(key)), None)
             if friend == 0xFFFFFFFF:

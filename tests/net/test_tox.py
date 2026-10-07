@@ -134,6 +134,26 @@ class ToxTest(unittest.TestCase):
         a.send({"cmd": "cancel"})                # out of the game, then
         a.send({"cmd": "forget", "friend": ben})  # Ana removes Ben; Ben still has Ana
         play_by_link()
+    def test_an_ignored_request_doesnt_block_the_next_invitation(self):
+        """toxcore drops every later request from someone whose request it
+        already passed on: one request for an ended invitation must not
+        block that person's next one."""
+        import time
+        a, b = self.procs
+        a.send({"cmd": "hello", "name": "Ana"})
+        b.send({"cmd": "hello", "name": "Ben"})
+        wait_for(self.procs, 0, "ready")
+        a.send({"cmd": "invite", "config": {"gameLanguage": "fr"}})
+        old = wait_for(self.procs, 0, "invite")["link"]
+        a.send({"cmd": "cancel"})                # the invitation ends...
+        b.send({"cmd": "join", "link": old})     # ...and Ben's request for it is ignored
+        wait_for(self.procs, 1, "joining")
+        time.sleep(30)
+        mark_a = len(a.events)
+        a.send({"cmd": "invite", "config": {"gameLanguage": "fr"}})
+        link = wait_for(self.procs, 0, "invite", after=mark_a)["link"]
+        b.send({"cmd": "join", "link": link})
+        wait_for(self.procs, 0, "knock", timeout=180, after=mark_a)
 
 if __name__ == "__main__":
     unittest.main()
